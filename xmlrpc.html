@@ -25,7 +25,7 @@
     <script type="text/javascript" src="_static/translations.js"></script>
     <link rel="top" title="Uliweb Documentation v1.0 documentation" href="index.html" />
     <link rel="next" title="I18N 使用说明" href="i18n.html" />
-    <link rel="prev" title="Simple Todo (Uliweb 版本) 之 基础篇" href="basic.html" /> 
+    <link rel="prev" title="迷你留言板" href="guestbook.html" /> 
   </head>
   <body>
     <div class="related">
@@ -38,7 +38,7 @@
           <a href="i18n.html" title="I18N 使用说明"
              accesskey="N">下一页</a> |</li>
         <li class="right" >
-          <a href="basic.html" title="Simple Todo (Uliweb 版本) 之 基础篇"
+          <a href="guestbook.html" title="迷你留言板"
              accesskey="P">上一页</a> |</li>
         <li><a href="index.html">Uliweb Documentation v1.0 documentation</a> &raquo;</li> 
       </ul>
@@ -125,7 +125,9 @@ settings.ini的FUNCTIONS中获取一个形如&#8217;module.function&#8217;的函
 <li><p class="first">xmlrpc可以支持带参数或不带参数。不带参数则会直接使用函数名作为将来调用的函数
 名。如果是类，则形式为ClassName.MethodName的形式。如果带参数，则这个参数将作
 为被调用的函数名，而不是原来的函数名了。所以上面的&#64;xmlrpc(&#8216;func&#8217;)就是给所修
-饰的函数重新起了一个名字，客户端应该使用func来访问，而不是new_func。</p>
+饰的函数重新起了一个名字，客户端应该使用func来访问，而不是new_func。如果是一
+个类方法，这个名字会与类名进行合并。所以上面的&#64;xmlrpc(&#8216;name&#8217;)处理后，你就应
+该使用Hello.name来访问了。</p>
 </li>
 <li><p class="first">如果类函数是以&#8217;_&#8217;开头的，将不会被调用。</p>
 </li>
@@ -176,8 +178,8 @@ settings.ini的FUNCTIONS中获取一个形如&#8217;module.function&#8217;的函
 </ul>
 
   <h4>上一个主题</h4>
-  <p class="topless"><a href="basic.html"
-                        title="上一章">Simple Todo (Uliweb 版本) 之 基础篇</a></p>
+  <p class="topless"><a href="guestbook.html"
+                        title="上一章">迷你留言板</a></p>
   <h4>下一个主题</h4>
   <p class="topless"><a href="i18n.html"
                         title="下一章">I18N 使用说明</a></p>
@@ -213,7 +215,7 @@ settings.ini的FUNCTIONS中获取一个形如&#8217;module.function&#8217;的函
           <a href="i18n.html" title="I18N 使用说明"
              >下一页</a> |</li>
         <li class="right" >
-          <a href="basic.html" title="Simple Todo (Uliweb 版本) 之 基础篇"
+          <a href="guestbook.html" title="迷你留言板"
              >上一页</a> |</li>
         <li><a href="index.html">Uliweb Documentation v1.0 documentation</a> &raquo;</li> 
       </ul>
