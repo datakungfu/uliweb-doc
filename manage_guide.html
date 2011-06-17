@@ -1,0 +1,268 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>命令行工具使用指南 &mdash; Uliweb Documentation v1.0 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/translations.js"></script>
+    <link rel="top" title="Uliweb Documentation v1.0 documentation" href="index.html" />
+    <link rel="next" title="ORM" href="orm.html" />
+    <link rel="prev" title="部署指南" href="deployment.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>导航</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="总目录"
+             accesskey="I">索引</a></li>
+        <li class="right" >
+          <a href="orm.html" title="ORM"
+             accesskey="N">下一页</a> |</li>
+        <li class="right" >
+          <a href="deployment.html" title="部署指南"
+             accesskey="P">上一页</a> |</li>
+        <li><a href="index.html">Uliweb Documentation v1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="id1">
+<h1>命令行工具使用指南<a class="headerlink" href="#id1" title="永久链接至标题">¶</a></h1>
+<p><tt class="docutils literal"><span class="pre">uliweb</span></tt> 是Uliweb提供的命令行工具，你可以用它做许多的事情。在使用它之前，你应该要先安装
+Uliweb，如:</p>
+<div class="highlight-python"><pre>python setup.py develop</pre>
+</div>
+<p>or:</p>
+<div class="highlight-python"><pre>python setup.py install</pre>
+</div>
+<p>or:</p>
+<div class="highlight-python"><pre>easy_install uliweb</pre>
+</div>
+<div class="section" id="runserver">
+<h2>runserver<a class="headerlink" href="#runserver" title="永久链接至标题">¶</a></h2>
+<p>启动开发服务器:</p>
+<div class="highlight-python"><pre>Usage: uliweb runserver [options]
+
+options:
+
+-h hostname
+
+    开发服务器的地址，缺省为localhost
+
+-p port
+
+    开发服务器端口，缺省为8000
+
+--no-reloader
+
+    是否当修改代码后自动重新装载代码，缺省为自动重新装载
+
+--no-debugger
+
+    是否当出现错误时可以显示Debug页面，缺省为显示</pre>
+</div>
+<p>示例：</p>
+<div class="highlight-python"><pre>uliweb runserver #启动缺省服务器</pre>
+</div>
+</div>
+<div class="section" id="develop">
+<h2>develop<a class="headerlink" href="#develop" title="永久链接至标题">¶</a></h2>
+<p>功能同runserver，但是会自动包含develop这个App。</p>
+</div>
+<div class="section" id="makeproject">
+<h2>makeproject<a class="headerlink" href="#makeproject" title="永久链接至标题">¶</a></h2>
+<p>生成一个project框架，它将自动按给定的名字生成一个project目录，同时包含有初始子目录和文件。</p>
+<div class="highlight-python"><pre>Usage: uliweb makeproject projectname</pre>
+</div>
+<p>示例：</p>
+<div class="highlight-python"><pre>uliweb makeproject project</pre>
+</div>
+<p>创建project项目目录。</p>
+</div>
+<div class="section" id="makeapp">
+<h2>makeapp<a class="headerlink" href="#makeapp" title="永久链接至标题">¶</a></h2>
+<p>生成一个app框架，它将自动按给定的名字生成一个app目录，同时包含有初始子目录和文件。</p>
+<div class="highlight-python"><pre>Usage: uliweb makeapp appname</pre>
+</div>
+<p>示例：</p>
+<div class="highlight-python"><pre>uliweb makeapp Hello</pre>
+</div>
+<p>创建Hello应用，将在apps目录下创建一个Hello的目录，并带有初始的文件和结构。</p>
+</div>
+<div class="section" id="makepkg">
+<h2>makepkg<a class="headerlink" href="#makepkg" title="永久链接至标题">¶</a></h2>
+<p>生成一个Python包结构目录，即带有__init__.py文件。</p>
+<div class="highlight-python"><pre>Usage: uliweb makepkg pkgname</pre>
+</div>
+</div>
+<div class="section" id="exportstatic">
+<h2>exportstatic<a class="headerlink" href="#exportstatic" title="永久链接至标题">¶</a></h2>
+<p>将所有已安装的app下的static文件和子目录复制到一个统一的目录下。注意，如果你在apps的
+settings.py中设定了INSTALLED_APPS参数，则所有设定的app将被处理，如果没有设置，则
+按缺省方式，将apps目录下的所有app都进行处理。对于存在同名的文件，此命令缺省将进行检
+查，如果发现文件名相同，但内容不同的文件将会给出指示，并且放弃对此文件的拷贝。可以
+在命令行使用-no-check来关闭检查。</p>
+<div class="highlight-python"><pre>Usage: uliweb exportstatic [options] outputdir
+
+options:
+
+-v
+
+    是否输出冗余信息。缺省为不输出。一旦设定将在执行时显示一些处理情况。
+
+-no-check
+
+    是否在拷贝时进行检查。缺省为检查，一旦发现不符会在命令行进行指示。如果设定为
+    不检查，则直接进行覆盖。</pre>
+</div>
+<p>示例：</p>
+<div class="highlight-python"><pre>uliweb exportstatic ../uliweb_test
+#将所有已安装的app下的static文件拷贝到../uliweb_test目录下。</pre>
+</div>
+</div>
+<div class="section" id="i18n">
+<h2>i18n<a class="headerlink" href="#i18n" title="永久链接至标题">¶</a></h2>
+<p>i18n处理工具，用来从项目中提取_()形式的信息，并生成.pot文件。可以按app或全部app或整个
+项目为单位进行处理。对于app或全部app方式，将在每个app下创建： <tt class="docutils literal"><span class="pre">app/locale/[zh]/LC_MESSAGES/uliweb.pot</span></tt>
+这样的文件。其中[zh]根据语言的不同而不同。并且它还会把.pot文件自动合并到uliweb.po文件上。</p>
+<div class="highlight-python"><pre>Usage: uliweb i18n [options]
+
+options:
+
+--apps
+
+    对所有app进行处理。
+
+-p
+
+    处理整个项目。
+
+-d
+
+    处理指定目录。
+
+--uliweb
+
+    只处理uliweb本身。
+
+-l locale
+
+    如果没有指定则为en。否则按指定名字生成相应的目录。</pre>
+</div>
+<p>示例：</p>
+<div class="highlight-python"><pre>uliweb i18n -d plugs -l zh_CN #处理plugs目录
+uliweb i18n --apps -l zh_CN   #全部全部app的处理
+uliweb i18n -p                #整个项目，使用en</pre>
+</div>
+</div>
+<div class="section" id="extracturls">
+<h2>extracturls<a class="headerlink" href="#extracturls" title="永久链接至标题">¶</a></h2>
+<p>从每个view模块中抽取URL定义，所以你需要首先使用expose()来定义它们。它将会把所有的URL
+输出到apps/urls.py中。如果存在apps/urls.py文件，Uliweb在启动时将自动进行导入，并
+禁止expose()。</p>
+<div class="highlight-python"><pre>Usage: uliweb extracturls</pre>
+</div>
+<p>如果已经在apps目录下存在urls.py文件，它将提示你是否你想要覆盖。</p>
+</div>
+<div class="section" id="call">
+<h2>call<a class="headerlink" href="#call" title="永久链接至标题">¶</a></h2>
+<div class="highlight-python"><pre>Usage: uliweb call name</pre>
+</div>
+<p>执行所有安装的App下的名为&lt;name&gt;.py程序。</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">內容目录</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">命令行工具使用指南</a><ul>
+<li><a class="reference internal" href="#runserver">runserver</a></li>
+<li><a class="reference internal" href="#develop">develop</a></li>
+<li><a class="reference internal" href="#makeproject">makeproject</a></li>
+<li><a class="reference internal" href="#makeapp">makeapp</a></li>
+<li><a class="reference internal" href="#makepkg">makepkg</a></li>
+<li><a class="reference internal" href="#exportstatic">exportstatic</a></li>
+<li><a class="reference internal" href="#i18n">i18n</a></li>
+<li><a class="reference internal" href="#extracturls">extracturls</a></li>
+<li><a class="reference internal" href="#call">call</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>上一个主题</h4>
+  <p class="topless"><a href="deployment.html"
+                        title="上一章">部署指南</a></p>
+  <h4>下一个主题</h4>
+  <p class="topless"><a href="orm.html"
+                        title="下一章">ORM</a></p>
+  <h3>本页</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/manage_guide.txt"
+           rel="nofollow">显示源代码</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>快速搜索</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="搜索" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    输入相关的模块，术语，类或者函数名称进行搜索
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>导航</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="总目录"
+             >索引</a></li>
+        <li class="right" >
+          <a href="orm.html" title="ORM"
+             >下一页</a> |</li>
+        <li class="right" >
+          <a href="deployment.html" title="部署指南"
+             >上一页</a> |</li>
+        <li><a href="index.html">Uliweb Documentation v1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; 版权所有 2011, limodou.
+      使用 <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>
