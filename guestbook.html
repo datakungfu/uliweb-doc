@@ -51,7 +51,7 @@
             
   <div class="section" id="id1">
 <h1>迷你留言板<a class="headerlink" href="#id1" title="永久链接至标题">¶</a></h1>
-<p>也许你已经学过了 <a class="reference external" href="hello_uliweb">Hello, Uliweb</a> 这篇教程，对Uliweb已经有了一个感性的
+<p>也许你已经学过了 <a class="reference external" href="hello_uliweb.html">Hello, Uliweb</a> 这篇教程，对Uliweb已经有了一个感性的
 认识，那么好，现在让我们进入数据库的世界，看一看如何使用简单的数据库。</p>
 <div class="section" id="id2">
 <h2>准备<a class="headerlink" href="#id2" title="永久链接至标题">¶</a></h2>
@@ -60,7 +60,7 @@
 cd guestbook
 uliweb runserver</pre>
 </div>
-<p>然后在浏览器输入 <a class="reference external" href="http://localhost:8000/guestbook">http://localhost:8000/guestbook</a> 这样就可以看到了。目前缺省是使用
+<p>然后在浏览器输入 <a class="reference external" href="http://localhost:8000/">http://localhost:8000/</a> 这样就可以看到了。目前缺省是使用
 sqlite3。如果你安装了python 2.5它已经是内置的。否则要安装相应的数据库和Python的绑定模
 块。目前Uliweb使用 <a class="reference external" href="http://www.sqlalchemy.org">SqlAlchemy</a> 作为数据库底层驱动，
 它支持多种数据库，如：mysql, sqlite, postgresql, 等。</p>
@@ -121,65 +121,25 @@ ORM，但是你可以不使用它。Uliweb提供了插件机制，可以让你�
 </pre></div>
 </div>
 <p>这里我们使用相对路径格式，所以 <tt class="docutils literal"><span class="pre">guestbook.db</span></tt> 将会在guestbook目录下被创建。</p>
+</div>
 <div class="section" id="id5">
-<h3>数据库初始化<a class="headerlink" href="#id5" title="永久链接至标题">¶</a></h3>
-<p>首先是设定一个参数 <tt class="docutils literal"><span class="pre">DEBUG_LOG</span> <span class="pre">=</span> <span class="pre">True</span></tt> ，注意全部是大写，它将用来控制是否要输出调试信息，这
-里为底层的SQL语句。</p>
-<p>然后:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="nd">@plugin</span><span class="p">(</span><span class="s">&#39;startup&#39;</span><span class="p">)</span>
-<span class="k">def</span> <span class="nf">startup</span><span class="p">(</span><span class="n">sender</span><span class="p">):</span>
-    <span class="kn">from</span> <span class="nn">uliweb</span> <span class="kn">import</span> <span class="n">orm</span>
-    <span class="n">orm</span><span class="o">.</span><span class="n">set_debug_query</span><span class="p">(</span><span class="n">DEBUG_LOG</span><span class="p">)</span>
-    <span class="n">orm</span><span class="o">.</span><span class="n">set_auto_bind</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
-    <span class="n">orm</span><span class="o">.</span><span class="n">set_auto_migirate</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
-    <span class="n">orm</span><span class="o">.</span><span class="n">get_connection</span><span class="p">(</span><span class="o">**</span><span class="n">connection</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>它将当Uliweb在执行到startup的位置时会调用相关的插件函数。startup是插件函数调用点的名字，
-已经在SimpleFrame.py中定义了。每个调用点都有自已的名字和将要传递的参数。startup将传递
-sender参数，这里sender就是框架实例。每一个插件函数的第一个参数都是调用者对象。</p>
-<p>后面就是数据库初始化的工作了。因为Uliweb并不绑定一个数据库，因此初始化的工作需要由你来做，
-这样就比较自由。同时因为Uliweb组织方式为APP模式，它在启动时会自动查找所有APP下的settings.py
-并进行导入，进行配置参数的收集工作，因此你就可以在每个APP下的settings.py写自已需要的配
-置处理。一旦在一个地方设定的，它相当于全局生效了。所以这种方式的使用，当你希望每个APP尽可
-能独立时非常有用。因此在Uliweb中的APP，一方面它可以保持有自已的结构，甚至包含静态文件，
-配置文件，但同时在需要时也可以直接分享其它APP的信息。</p>
-<p><tt class="docutils literal"><span class="pre">set_debug_query(DEBUG_LOG)</span></tt> 用来设置显示底层的SQL，在开发服务器环境下，它将显示在命令行上。</p>
-<p><tt class="docutils literal"><span class="pre">set_auto_bind(True)</span></tt> 自动绑定设置。这样当你导入一个Model时，它将自动与缺省的数据库连接
-进行绑定，就可以直接使用了。不然，你需要手动绑定每个Model需要与哪个连接关联。在只有单数据
-连接时可以打开，在使用多数据连接时可以关闭，然后进行手工绑定处理。</p>
-<p><tt class="docutils literal"><span class="pre">set_auto_migrate(True)</span></tt> 这个作用很大。首先，如果在运行时表还不存在，则Uliweb可以自动创
-建表结构。其次，如果你使用过web2py，你会知道当Model发生变化时可以自动更新表结构。那么
-Uliorm也可以做到，不过目前比较简单，只能处理象：增加，删除，修改
-的情况。对于修改，可能会造成数据丢失。现在无法判断字段的改名，所以一旦改名，其实就是删除旧
-的，创建新的，所以数据会丢失。这里可以把这个开关关闭，手工修改数据库，同时做好数据的备份。
-我认为采用数据备份，然后通过恢复程序来恢复是最安全的。不过现在Uliweb还没有这类的工具。</p>
-<p>采用自动迁移在开发时用户不必考虑修改表结构的工作，只要改了就生效，会非常方便。</p>
-<p>经过上两步的设定，就可以在Uliweb环境下非常方便的使用数据库了。只要定义好，使用它就行了。
-象建表，修改表结构全部自动完成，非常方便。</p>
-<p><tt class="docutils literal"><span class="pre">orm.get_connection(**connection)</span></tt> 将创建数据库连接对象，并根据上面相关的设定进行必要的
-初始化工作。所以上面的设定需要在调用get_conection()前完成。在调用完get_connection()之
-后，创建的连接将作为缺省连接供全局使用。</p>
-</div>
-</div>
-<div class="section" id="id6">
-<h2>模板环境的扩展<a class="headerlink" href="#id6" title="永久链接至标题">¶</a></h2>
-<p>在settings.py中还有一个东西:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="nd">@plugin</span><span class="p">(</span><span class="s">&#39;prepare_view_env&#39;</span><span class="p">)</span>
+<h2>模板环境的扩展<a class="headerlink" href="#id5" title="永久链接至标题">¶</a></h2>
+<p>向 <tt class="docutils literal"><span class="pre">GuestBook/__init__.py</span></tt> 中添加:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">uliweb.core.dispatch</span> <span class="kn">import</span> <span class="n">bind</span>
+
+<span class="nd">@bind</span><span class="p">(</span><span class="s">&#39;prepare_view_env&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">prepare_view_env</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
     <span class="kn">from</span> <span class="nn">uliweb.utils.textconvert</span> <span class="kn">import</span> <span class="n">text2html</span>
     <span class="n">env</span><span class="p">[</span><span class="s">&#39;text2html&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">text2html</span>
 </pre></div>
 </div>
-<p>这也是一个插件的使用示例，它将向模板的环境中注入一个新的函数 <tt class="docutils literal"><span class="pre">text2html</span></tt>, 这样你就可以
-在模板中直接使用text2html这个函数了。并且因为这个插入点是全局生效的，所以其它的App可以
-复用它。</p>
+<p>这也是一个dispatch的使用示例，它将向模板的环境中注入一个新的函数 <tt class="docutils literal"><span class="pre">text2html</span></tt>,
+这样你就可以在模板中直接使用text2html这个函数了。</p>
 </div>
 <div class="section" id="model">
 <h2>准备Model<a class="headerlink" href="#model" title="永久链接至标题">¶</a></h2>
 <p>在GuestBook目录下创建一个名为models.py的文件，内容为:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">uliweb.orm</span> <span class="kn">import</span> <span class="o">*</span>
-<span class="kn">import</span> <span class="nn">datetime</span>
 
 <span class="k">class</span> <span class="nc">Note</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
     <span class="n">username</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">CHAR</span><span class="p">)</span>
@@ -190,8 +150,8 @@ Uliorm也可以做到，不过目前比较简单，只能处理象：增加，�
 </pre></div>
 </div>
 <p>很简单。</p>
-<p>首先要从 uliweb.orm 中导入一些东西，这是是全部导入。</p>
-<p>然后是导入datetime模块。为什么会用到它，因为Uliorm在定义Model时支持两种定义方式：</p>
+<p>首先要从 uliweb.orm 中导入一些东西，这里是全部导入。</p>
+<p>Uliorm在定义Model时支持两种定义方式：</p>
 <ul class="simple">
 <li>使用内部的Python类型，如：int, float, unicode, datetime.datetime, datetime.date,
 datetime.time, decimal.Decimal, str, bool。另外还扩展了一些类型，如：BLOB, CHAR, TEXT, DECIMAL。
@@ -217,14 +177,15 @@ TimeProperty, DecimalProperty, FloatProperty, TextProperty。</li>
 <li>verbose_name 提示信息</li>
 </ul>
 <p>象CharProperty和StringProperty，需要有一个max_length属性，如果没有给出，缺省是30。</p>
-<p>等。具体的回头我会详细在数据文档中进行说明。</p>
+<p>其它详细的说明可以在数据文档中查看。</p>
 <div class="admonition note">
 <p class="first admonition-title">注解</p>
-<p class="last">在定义Model时，Uliorm会自动为你添加 <tt class="docutils literal"><span class="pre">id</span></tt> 字段的定义，它将是一个主键，这一点与Django一样。</p>
+<p class="last">在定义Model时，Uliorm会自动为你添加 <tt class="docutils literal"><span class="pre">id</span></tt> 字段的定义，它将是一个主键，这一
+点与Django一样。</p>
 </div>
 </div>
-<div class="section" id="id7">
-<h2>静态文件处理<a class="headerlink" href="#id7" title="永久链接至标题">¶</a></h2>
+<div class="section" id="id6">
+<h2>静态文件处理<a class="headerlink" href="#id6" title="永久链接至标题">¶</a></h2>
 <p>我们将在后面显示静态文件，现在只需要把 <tt class="docutils literal"><span class="pre">uliweb.contrib.staticfiles</span></tt> 添加到 <tt class="docutils literal"><span class="pre">INSTALLED_APPS</span></tt>
 中就可以了。使用这个App，所有有效的app的static目录将被处理为静态目录，并且URL链接将添加
 <tt class="docutils literal"><span class="pre">/static/</span></tt> 。现在 <tt class="docutils literal"><span class="pre">settings.ini</span></tt> 看上去象:</p>
@@ -242,31 +203,33 @@ TimeProperty, DecimalProperty, FloatProperty, TextProperty。</li>
 </pre></div>
 </div>
 </div>
-<div class="section" id="id8">
-<h2>显示留言<a class="headerlink" href="#id8" title="永久链接至标题">¶</a></h2>
+<div class="section" id="id7">
+<h2>显示留言<a class="headerlink" href="#id7" title="永久链接至标题">¶</a></h2>
 <div class="section" id="guestbook-view">
 <h3>增加guestbook()的View方法<a class="headerlink" href="#guestbook-view" title="永久链接至标题">¶</a></h3>
 <p>打开GuestBook下的views.py文件，加入显示留言的处理代码:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="nd">@expose</span><span class="p">(</span><span class="s">&#39;/guestbook&#39;</span><span class="p">)</span>
-<span class="k">def</span> <span class="nf">guestbook</span><span class="p">():</span>
-    <span class="kn">from</span> <span class="nn">models</span> <span class="kn">import</span> <span class="n">Note</span>
-    <span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">desc</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">uliweb</span> <span class="kn">import</span> <span class="n">expose</span>
+<span class="kn">from</span> <span class="nn">models</span> <span class="kn">import</span> <span class="n">Note</span>
 
-    <span class="n">notes</span> <span class="o">=</span> <span class="n">Note</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">order_by</span><span class="o">=</span><span class="p">[</span><span class="n">desc</span><span class="p">(</span><span class="n">Note</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">datetime</span><span class="p">)])</span>
-    <span class="k">return</span> <span class="nb">locals</span><span class="p">()</span>
+<span class="nd">@expose</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span>
+    <span class="n">notes</span> <span class="o">=</span> <span class="n">notes</span> <span class="o">=</span> <span class="n">Note</span><span class="o">.</span><span class="n">all</span><span class="p">()</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">Note</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">desc</span><span class="p">())</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;notes&#39;</span><span class="p">:</span><span class="n">notes</span><span class="p">}</span>
 </pre></div>
 </div>
-<p>先定义url为 <tt class="docutils literal"><span class="pre">/guestbook</span></tt> 。</p>
-<p>然后是guestbook()函数的定义。我们先导入Note类，然后通过它的类方法filter进行数据库的查
-询。为了按时间倒序显示，我在filter中对 <tt class="docutils literal"><span class="pre">order_by</span></tt> 定义了降序排序，这里是SqlAlchemy的查询
-语法。这个条件的意思就是对 <tt class="docutils literal"><span class="pre">datetime</span></tt> 字段进行倒序处理。</p>
+<p>在开始的地方，我们导入了Node类。后面我们会用到。</p>
+<p>然后使用expose()来定义URL为 <tt class="docutils literal"><span class="pre">/</span></tt> 。</p>
+<p>然后是index()函数的定义。我们通过调用Node类的方法all()获得所有
+记录。为了按时间倒序显示，使用order_by()方法，传入要按顺的字段。其中
+<tt class="docutils literal"><span class="pre">Note.c.datetime.desc()</span></tt> 是Sqlalchemy的用法，表示倒序。</p>
 <p>以下是一些简单的用法:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">notes</span> <span class="o">=</span> <span class="n">Note</span><span class="o">.</span><span class="n">filter</span><span class="p">()</span>               <span class="c">#全部记录，不带条件</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">notes</span> <span class="o">=</span> <span class="n">Note</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>                  <span class="c">#全部记录，不带条件</span>
 <span class="n">note</span> <span class="o">=</span> <span class="n">Note</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>                  <span class="c">#获取id值为3的记录</span>
 <span class="n">note</span> <span class="o">=</span> <span class="n">Note</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">Note</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">username</span><span class="o">==</span><span class="s">&#39;limodou&#39;</span><span class="p">)</span> <span class="c">#获取username为limodou的记录</span>
 </pre></div>
 </div>
-<p>然后我们返回locals()，让模板来使用它。</p>
+<p>然后我们返回一个字典，这样会自动使用Uliweb的模板套用机制，即自动调用与view方法
+同名的模板文件。</p>
 <div class="admonition note">
 <p class="first admonition-title">注解</p>
 <p>在Uliweb中每个访问的URL与View之间要通过定义来实现，如使用expose。它需要一个URL的
@@ -278,24 +241,25 @@ View方法的字符串形式和对应的参数来反向生成URL，可以用来�
 们将看到。</p>
 </div>
 </div>
-<div class="section" id="guestbook-html">
-<h3>定义guestbook.html模板<a class="headerlink" href="#guestbook-html" title="永久链接至标题">¶</a></h3>
-<p>在GuestBook/templates目录下创建与View方法同名的模板，后缀为.html。在guestbook.html中
+<div class="section" id="index-html">
+<h3>定义index.html模板<a class="headerlink" href="#index-html" title="永久链接至标题">¶</a></h3>
+<p>在GuestBook/templates目录下创建与View方法同名的模板，后缀为.html。在index.html中
 添加如下内容:</p>
 <div class="highlight-python"><pre>{{extend "base.html"}}
-&lt;h1&gt;Uliweb Guest Book&lt;/h1&gt;
-&lt;h2&gt;&lt;a href="{{=url_for('%s.views.new_comment' % request.appname)}}"&gt;New Comment&lt;/a&gt;&lt;/h2&gt;
+{{block content}}
+&lt;h2&gt;&lt;a href="{{=url_for('GuestBook.views.new_comment')}}"&gt;New Comment&lt;/a&gt;&lt;/h2&gt;
 {{for n in notes:}}
-&lt;div class="message"&gt;
-&lt;h3&gt;&lt;a href="{{= url_for('%s.views.del_comment' % request.appname, id=n.id) }}"&gt;
-&lt;img src="{{= url_for('%s.views.static' % request.appname, filename='delete.gif') }}"/&gt;
-&lt;/a&gt; {{=n.username}} at {{=n.datetime.strftime('%Y/%m/%d %H:%M:%S')}} say:&lt;/h3&gt;
-&lt;p&gt;{{&lt;&lt;text2html(n.message)}}&lt;/p&gt;
-&lt;/div&gt;
-{{pass}}</pre>
+    &lt;div class="info"&gt;
+    &lt;h3&gt;&lt;a href="{{= url_for('GuestBook.views.del_comment', id=n.id) }}"&gt;
+    &lt;img src="{{= url_for_static('delete.gif') }}"/&gt;
+    &lt;/a&gt; {{=n.username}} at {{=n.datetime.strftime('%Y/%m/%d %H:%M:%S')}} say:&lt;/h3&gt;
+    &lt;p&gt;{{&lt;&lt;text2html(n.message)}}&lt;/p&gt;
+    &lt;/div&gt;
+{{pass}}
+{{end}}</pre>
 </div>
-<p>第一行将从base.html模板进行继承。这里不想多说，只是要注意在base.html中有一个{{include}}
-的定义，它表示子模板要插入的位置。你可以从Uliweb的源码中将base.html拷贝到你的目录下。</p>
+<p>第一行将从base.html模板进行继承。这里不想多说，只是要注意在base.html中有一个{{block content}}{{end}}
+的定义，它表示子模板可以继承的块。你可以从Uliweb的源码中将base.html拷贝到你的目录下。</p>
 <p>h2 标签将显示一个链接，它将用来调用添加留言的view函数。注意模板没有将显示与添加的
 Form代码写在一起，因为那样代码比较多，同且如果用户输入出错，将再次显示所有的留言(因为这里
 没有考虑分页)，这样处理比较慢，所以分成不同的处理了。</p>
@@ -304,7 +268,7 @@ Form代码写在一起，因为那样代码比较多，同且如果用户输入�
 板允许你将代码都写在{{}}中，但对于HTML代码因为不是Python代码，要使用 <tt class="docutils literal"><span class="pre">out.write(htmlcode)</span></tt>
 这种代码来输出。也可以将Python代码写在{{}}中，而HTML代码放在括号外面，就象上面所做的。</p>
 <p>在循环中对notes变量进行处理，然后显示一个删除的图形链接，用户信息和用户留言。</p>
-<p>看到 <tt class="docutils literal"><span class="pre">{{&lt;&lt;text2html(n.message)}}</span></tt> 了吗？它使用了我们在settings.py中定义的text2html函
+<p>看到 <tt class="docutils literal"><span class="pre">{{&lt;&lt;text2html(n.message)}}</span></tt> 了吗？它使用了我们在GuestBook/__init__.py中定义的text2html函
 数对文本进行格式化处理。</p>
 <p><tt class="docutils literal"><span class="pre">{{pass}}</span></tt> 是必须的。在Uliweb模板中，不需要考虑缩近，但是需要在块语句结束时添加pass，表示缩
 近结果。这样相当于把Python对缩近的严格要求进行了转换，非常方便。</p>
@@ -317,8 +281,8 @@ GuestBook/static目录下将全部文件拷贝到你的目录下。</p>
 </div>
 </div>
 </div>
-<div class="section" id="id9">
-<h2>增加留言<a class="headerlink" href="#id9" title="永久链接至标题">¶</a></h2>
+<div class="section" id="id8">
+<h2>增加留言<a class="headerlink" href="#id8" title="永久链接至标题">¶</a></h2>
 <div class="section" id="new-comment-view">
 <h3>增加new_comment()的View方法<a class="headerlink" href="#new-comment-view" title="永久链接至标题">¶</a></h3>
 <p>在前面的模板中我们定义了增加留言的链接:</p>
@@ -327,75 +291,62 @@ GuestBook/static目录下将全部文件拷贝到你的目录下。</p>
 <p>可以看出，我们使用了url_for来生成反向的链接。关于url_for在前面已经讲了，这里要注意的就是
 函数名为new_comment，因此我们需要在views.py中生成这样的一个方法。</p>
 <p>打开views.py，加入以下代码:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="nd">@expose</span><span class="p">(</span><span class="s">&#39;/guestbook/new_comment&#39;</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="nd">@expose</span><span class="p">(</span><span class="s">&#39;/new&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">new_comment</span><span class="p">():</span>
-    <span class="kn">from</span> <span class="nn">models</span> <span class="kn">import</span> <span class="n">Note</span>
     <span class="kn">from</span> <span class="nn">forms</span> <span class="kn">import</span> <span class="n">NoteForm</span>
     <span class="kn">import</span> <span class="nn">datetime</span>
 
     <span class="n">form</span> <span class="o">=</span> <span class="n">NoteForm</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s">&#39;GET&#39;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;form&#39;</span><span class="p">:</span><span class="n">form</span><span class="o">.</span><span class="n">html</span><span class="p">(),</span> <span class="s">&#39;message&#39;</span><span class="p">:</span><span class="s">&#39;&#39;</span><span class="p">}</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;form&#39;</span><span class="p">:</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;message&#39;</span><span class="p">:</span><span class="s">&#39;&#39;</span><span class="p">}</span>
     <span class="k">elif</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s">&#39;POST&#39;</span><span class="p">:</span>
-        <span class="n">flag</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">flag</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">flag</span><span class="p">:</span>
-            <span class="n">n</span> <span class="o">=</span> <span class="n">Note</span><span class="p">(</span><span class="o">**</span><span class="n">data</span><span class="p">)</span>
-            <span class="n">n</span><span class="o">.</span><span class="n">put</span><span class="p">()</span>
-            <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.views.guestbook&#39;</span> <span class="o">%</span> <span class="n">request</span><span class="o">.</span><span class="n">appname</span><span class="p">))</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="n">Note</span><span class="p">(</span><span class="o">**</span><span class="n">form</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">n</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="n">index</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">message</span> <span class="o">=</span> <span class="s">&quot;There is something wrong! Please fix them.&quot;</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;form&#39;</span><span class="p">:</span><span class="n">form</span><span class="o">.</span><span class="n">html</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">params</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">py</span><span class="o">=</span><span class="bp">False</span><span class="p">),</span> <span class="s">&#39;message&#39;</span><span class="p">:</span><span class="n">message</span><span class="p">}</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s">&#39;form&#39;</span><span class="p">:</span><span class="n">form</span><span class="p">,</span> <span class="s">&#39;message&#39;</span><span class="p">:</span><span class="n">message</span><span class="p">}</span>
 </pre></div>
 </div>
-<p>可以看到链接是 <tt class="docutils literal"><span class="pre">/guestbook/new_comment</span></tt> 。</p>
-<p>首先我们导入了一些类，包括Note这个Model。那么NoteForm是什么呢？它是用来生成录入Form的
-对象，并且可以用来对数据进行校验。一会儿会对它进行介绍。</p>
+<p>可以看到链接是 <tt class="docutils literal"><span class="pre">/new</span></tt> 。</p>
+<p>首先我们导入了NoteForm这个类。它是用来生成录入Form的类，并且可以用来对数据进行校验。一会儿会对它进行介绍。</p>
 <p>然后创建form对象。</p>
 <p>再根据request.method是GET还是POST来执行不同的操作。对于GET将显示一个空Form，对于POST
 表示用户提交了数据，要进行处理。使用GET和POST可以在同一个链接下处理不同的动作，这是一种
 约定，一般中读操作使用GET，写或修改操作使用POST。</p>
 <p>在request.method为GET时，我们只是返回空的form对象和一个空的message变量。form.html()可
 以返回一个空的HTML表单代码。而message将用来提示出错的信息。</p>
-<p>在request.method为POST时， 首先调用 <tt class="docutils literal"><span class="pre">form.validate(request.params)</span></tt> 对数据进行校验。
+<p>在request.method为POST时， 首先调用 <tt class="docutils literal"><span class="pre">form.validate(request.values)</span></tt> 对数据进行校验。
 它将返回一个二元的tuple。第一个参数表示成功还是出错，第二个为成功时将转换为Python格式后
 的数据，失败时为出错信息。</p>
-<p>当flag为True时，进行成功处理。一会我们可以看到在表单中并没有datetime字段，因此这里我们
-手工添加一个值，表示留言提交的时间。然后通过 <tt class="docutils literal"><span class="pre">n</span> <span class="pre">=</span> <span class="pre">Note(**data)</span></tt> 来生成Note记录，但这里并没有提
-交到数据库中，因此再执行一个 <tt class="docutils literal"><span class="pre">n.put()</span></tt> 来保存记录到数据库中。使用 <tt class="docutils literal"><span class="pre">n.save()</span></tt> 也可以。</p>
+<p>当flag为True时，进行成功处理。一会我们可以看到在表单中并没有datetime字段，因为我们
+手工添加一个值，表示留言提交的时间。然后通过 <tt class="docutils literal"><span class="pre">n</span> <span class="pre">=</span> <span class="pre">Note(**form.data)</span></tt> 来生成Note记录，但这里并没有提
+交到数据库中，因此再执行一个 <tt class="docutils literal"><span class="pre">n.save()</span></tt> 来保存记录到数据库中。</p>
 <p>然后执行完毕后，调用 <tt class="docutils literal"><span class="pre">return</span> <span class="pre">redirect</span></tt> 进行页面的跳转，跳回留言板的首页。这里又使用了url_for来反
 向生成链接。</p>
-<p>当flag为False时，进行出错处理。这里我们向message中填入了出错提示，然后通过
-<tt class="docutils literal"><span class="pre">form.html(request.params,</span> <span class="pre">data,</span> <span class="pre">py=False)</span></tt> 来生成带出错信息的表单。这里data为出错
-信息。 <tt class="docutils literal"><span class="pre">py=False</span></tt> 是表示在使用数据时不进行Python数据转换。因为Form在校验数据之后会根据
-你所定义的数据类型，将上传的数据转换为Python的内部数据，如：int, float之类的。但是当出错
-时，不存在转换后的Python数据，因此不能做这种转换，这时要使用 <tt class="docutils literal"><span class="pre">py=False</span></tt> 参数。如果data
-是校验成功的数据，你想通过表单显示出来，可以直接使用 <tt class="docutils literal"><span class="pre">form.html(data)</span></tt> 就可以了。</p>
+<p>当flag为False时，进行出错处理。</p>
 </div>
-<div class="section" id="id10">
-<h3>定义录入表单<a class="headerlink" href="#id10" title="永久链接至标题">¶</a></h3>
+<div class="section" id="id9">
+<h3>定义录入表单<a class="headerlink" href="#id9" title="永久链接至标题">¶</a></h3>
 <p>为了与后台进行交互，让用户可以通过浏览器进行数据录入，需要使用HTML的form系列元素来定义
 录入元素。对于有经验的Web开发者可以直接手写HTML代码，但是对于初学者很麻烦。并且你还要考虑
 出错处理，数据格式转换的处理。因此许多框架都提供了生成表单的工具，Uliweb也不例外。Form模
 块就是干这个用的。</p>
 <p>在GuestBook目录下创建forms.py文件，然后添加以下代码:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">uliweb.core</span> <span class="kn">import</span> <span class="n">Form</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">uliweb.form</span> <span class="kn">import</span> <span class="o">*</span>
 
-<span class="n">Form</span><span class="o">.</span><span class="n">Form</span><span class="o">.</span><span class="n">layout_class</span> <span class="o">=</span> <span class="n">Form</span><span class="o">.</span><span class="n">CSSLayout</span>
-
-<span class="k">class</span> <span class="nc">NoteForm</span><span class="p">(</span><span class="n">Form</span><span class="o">.</span><span class="n">Form</span><span class="p">):</span>
-    <span class="n">message</span> <span class="o">=</span> <span class="n">Form</span><span class="o">.</span><span class="n">TextAreaField</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s">&#39;Message:&#39;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-    <span class="n">username</span> <span class="o">=</span> <span class="n">Form</span><span class="o">.</span><span class="n">TextField</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s">&#39;Username:&#39;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-    <span class="n">homepage</span> <span class="o">=</span> <span class="n">Form</span><span class="o">.</span><span class="n">TextField</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s">&#39;Homepage:&#39;</span><span class="p">)</span>
-    <span class="n">email</span> <span class="o">=</span> <span class="n">Form</span><span class="o">.</span><span class="n">TextField</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s">&#39;Email:&#39;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">NoteForm</span><span class="p">(</span><span class="n">Form</span><span class="p">):</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="n">TextField</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s">&#39;Message:&#39;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">username</span> <span class="o">=</span> <span class="n">StringField</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s">&#39;Username:&#39;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">homepage</span> <span class="o">=</span> <span class="n">StringField</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s">&#39;Homepage:&#39;</span><span class="p">)</span>
+    <span class="n">email</span> <span class="o">=</span> <span class="n">StringField</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s">&#39;Email:&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>首先导入Form模块，然后设定Form类使用css布局。目前Uliweb的Form提供两种布局，一种是使用
-table元素生成的，另一种是使用div元素生成的。table布局是缺省的。</p>
-<p>接着就是创建NoteForm元素了。这里我定义了4个字段，每个字段对应一种类型。象TextAreaField
-表示多行的文本编辑，TextField表示单行文本，你还可以使用象：HiddenField, SelectField,
-FileField, IntField, PasswordField, RadioSelectField等字段类型。目前Form的定义方式
-与Uliorm的不太一致，因为Form创建的时间更早，以后也可以考虑写一个统一的Field来进行一致性
-的处理。</p>
+<p>这里我定义了4个字段，每个字段对应一种类型。象TextField
+表示多行的文本编辑，StringField表示单行文本，你还可以使用象：HiddenField, SelectField,
+FileField, IntField, PasswordField, RadioSelectField等字段类型。</p>
 <p>也许你看到了，这其中有一些是带有类型的，如IntField，那么它将会转换为对应的Python数据类
 型，同时当生成HTML代码时再转换回字符串。</p>
 <p>每个Field类型可以定义若干的参数，如：</p>
@@ -411,42 +362,42 @@ FileField, IntField, PasswordField, RadioSelectField等字段类型。目前Form
 <h3>编写new_comment.html模板文件<a class="headerlink" href="#new-comment-html" title="永久链接至标题">¶</a></h3>
 <p>在GuestBook/templates下创建new_comment.html，然后添加以下内容:</p>
 <div class="highlight-python"><pre>{{extend "base.html"}}
+{{block content}}
 {{if message:}}
-&lt;p class="message"&gt;{{=message}}&lt;/p&gt;
+    &lt;p class="warning"&gt;{{=message}}&lt;/p&gt;
 {{pass}}
 &lt;h1&gt;New Comment&lt;/h1&gt;
 &lt;div class="form"&gt;
-{{&lt;&lt; form}}
-&lt;/div&gt;</pre>
+{{&lt;&lt;form}}
+&lt;/div&gt;
+{{end}}</pre>
 </div>
 <p>首先是 <tt class="docutils literal"><span class="pre">{{extend</span> <span class="pre">&quot;base.html&quot;}}</span></tt> 表示从base.html继承。</p>
 <p>然后是一个 if 判断是否有message信息，如果有则显示。这里要注意if后面的&#8217;:&#8217;号。</p>
 <p>然后显示form元素，这里使用了 <tt class="docutils literal"><span class="pre">{{&lt;&lt;</span> <span class="pre">form}}</span></tt> 。form是从View中传入的，而{{&lt;&lt;}}
 可以对要输出的内容中的HTML标签 不进行转义处理。而 {{=variable}} 将对variable
-变量的HTML标签进行转换。因此，如果你想输出原始的HTML文本，要使用Xml()来输出。</p>
+变量的HTML标签进行转换。因此，如果你想输出原始的HTML文本，要使用{{&lt;&lt;}}来输出。</p>
 <p>现在可以在浏览器中试一下了。</p>
 </div>
 </div>
-<div class="section" id="id11">
-<h2>删除留言<a class="headerlink" href="#id11" title="永久链接至标题">¶</a></h2>
+<div class="section" id="id10">
+<h2>删除留言<a class="headerlink" href="#id10" title="永久链接至标题">¶</a></h2>
 <p>在前面guestbook.html中，我们在每条留言前定义了一个删除的图形链接，形式为:</p>
-<div class="highlight-python"><pre>&lt;a href="{{=url_for('%s.views.new_comment' % request.appname)}}"&gt;New Comment&lt;/a&gt;</pre>
+<div class="highlight-python"><pre>&lt;a href="{{= url_for('GuestBook.views.del_comment', id=n.id) }}"&gt;</pre>
 </div>
 <p>那么下面就让我们实现它。</p>
 <p>打开GuestBook/views.py文件，然后添加:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="nd">@expose</span><span class="p">(</span><span class="s">&#39;/guestbook/delete/&lt;id&gt;&#39;</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="nd">@expose</span><span class="p">(</span><span class="s">&#39;/delete/&lt;id&gt;&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">del_comment</span><span class="p">(</span><span class="nb">id</span><span class="p">):</span>
-    <span class="kn">from</span> <span class="nn">models</span> <span class="kn">import</span> <span class="n">Note</span>
-
     <span class="n">n</span> <span class="o">=</span> <span class="n">Note</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">id</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">n</span><span class="p">:</span>
         <span class="n">n</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.views.guestbook&#39;</span> <span class="o">%</span> <span class="n">request</span><span class="o">.</span><span class="n">appname</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">url_for</span><span class="p">(</span><span class="n">index</span><span class="p">))</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">error</span><span class="p">(</span><span class="s">&quot;No such record [</span><span class="si">%s</span><span class="s">] existed&quot;</span> <span class="o">%</span> <span class="nb">id</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>删除很简单，导入Note，然后通过 <tt class="docutils literal"><span class="pre">Note.get(int(id))</span></tt> 来得到对象，然后再调用对象的delete()
+<p>删除很简单，首先通过 <tt class="docutils literal"><span class="pre">Note.get(int(id))</span></tt> 来得到对象，然后再调用对象的delete()
 方法来删除。</p>
 <div class="section" id="url">
 <h3>URL参数定义<a class="headerlink" href="#url" title="永久链接至标题">¶</a></h3>
@@ -458,38 +409,32 @@ int将自动转化为 <tt class="docutils literal"><span class="pre">\d+</span><
 这里的id与URL中的id是一样的。</p>
 <p>好了，现在你可以试一试删除功能是否可用了。</p>
 </div>
-<div class="section" id="id12">
-<h3>出错页面<a class="headerlink" href="#id12" title="永久链接至标题">¶</a></h3>
+<div class="section" id="id11">
+<h3>出错页面<a class="headerlink" href="#id11" title="永久链接至标题">¶</a></h3>
 <p>当程序出错时，你可能需要向用户提示一个错误信息，因此可以使用error()方法来返回一个出错
 的页面。它的前面不需要return。只需要一个出错信息就可以了。</p>
 <p>那么出错信息的模板怎么定义呢？在你的templates目录下定义一个名为error.html的文件，并加
 入一些内容即可。</p>
 <p>创建error.html，然后，输入如下代码:</p>
-<div class="highlight-python"><pre>{{title="Error"}}
-{{extend "base.html"}}
-&lt;h1&gt;Error!&lt;/h1&gt;
-&lt;p&gt;{{=message}}&lt;/p&gt;</pre>
+<div class="highlight-python"><pre>{{extend "base.html"}}
+{{block title}}Error{{end}}
+{{block header}}&lt;h1&gt;Error!&lt;/h1&gt;{{end}}
+{{block content}}
+&lt;p&gt;{{=message}}&lt;/p&gt;
+{{end}}</pre>
 </div>
-<p>这个页面很简单，就是定义了一个title变量，然后是继承base.html，再接着是显示出错内容。</p>
-<p>不过这里有一个很重要的技巧，那就是在 {{extend}} 前面定义的内容在渲染模板时，将出现在最
-前面。这样，一旦父模板中有一些变量需要处理，但是你没有通过View方法来传入，而是在子模板
-中来定义它，通过这种方法就可以将定义放在使用语句的前面，从而不会报未定义的错误。</p>
-<div class="admonition note">
-<p class="first admonition-title">注解</p>
-<p class="last">这是我对web2py模板的一个扩展。以前web2py要求{{extend}}是第一行的，但现在可以不是。
-并且这种处理可以很好的处理：在子模板中定义在父模板中要使用的变量的情况。</p>
+<p>这个页面很简单，就是覆盖了一些block的定义。如title, header, content。</p>
 </div>
 </div>
-</div>
-<div class="section" id="id13">
-<h2>运行<a class="headerlink" href="#id13" title="永久链接至标题">¶</a></h2>
+<div class="section" id="id12">
+<h2>运行<a class="headerlink" href="#id12" title="永久链接至标题">¶</a></h2>
 <p>在前面的开发过程中你可以启动一个开发服务器进行调试。启动开发服务器的命令为:</p>
 <div class="highlight-python"><pre>uliweb runserver</pre>
 </div>
 <p>当启动后，在浏览器输入： <tt class="docutils literal"><span class="pre">http://localhost:8000/</span></tt></p>
 </div>
-<div class="section" id="id14">
-<h2>结论<a class="headerlink" href="#id14" title="永久链接至标题">¶</a></h2>
+<div class="section" id="id13">
+<h2>结论<a class="headerlink" href="#id13" title="永久链接至标题">¶</a></h2>
 <p>经过学习，我们了解了许多内容：</p>
 <ol class="arabic simple">
 <li>ORM的使用，包括：ORM的初始化配置，Model的定义，简单的增加，删除，查询</li>
@@ -498,14 +443,11 @@ int将自动转化为 <tt class="docutils literal"><span class="pre">\d+</span><
 技巧，错误模板的使用，Python代码的嵌入</li>
 <li>View的使用，包括：redirect, error的使用, 静态文件处理</li>
 <li>URL映射的使用，包括：expose的使用，参数定义，与View函数的对应</li>
-<li>manage.py的使用，包括：export, makeapp的使用</li>
-<li>结构的了解，包括：Uliweb的app组织，settings.py文件的处理机制，view函数与模板文件
+<li>结构的了解，包括：Uliweb的app组织，settings.ini的简单使用，view函数与模板文件
 的对应关系</li>
 </ol>
-<p>内容很多，的确。而这些还远远不是一个框架的全部。随着应用的复杂，框架的功能也会越来越多。
-而一个好的框架应该就是让有经验的人用来首先构建出一个更易于使用，易于管理的环境，然后
-让团队中的人在这个环境下去开发，让对框架有经验的人对环境进行不断的调整和完善，使其越来
-越方便和强大。Uliweb正在向着这个目标前进。</p>
+<p>这里演示的View的处理还是基于函数的方式 ，在另一篇 <a class="reference external" href="basic.html">Simple Todo (Uliweb 版本) 之 基础篇</a>
+中有如何使用Class方式的View。</p>
 </div>
 </div>
 
@@ -521,31 +463,28 @@ int将自动转化为 <tt class="docutils literal"><span class="pre">\d+</span><
 <li><a class="reference internal" href="#id2">准备</a></li>
 <li><a class="reference internal" href="#id3">创建工程</a></li>
 <li><a class="reference internal" href="#app">创建APP</a></li>
-<li><a class="reference internal" href="#id4">配置数据库</a><ul>
-<li><a class="reference internal" href="#id5">数据库初始化</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#id6">模板环境的扩展</a></li>
+<li><a class="reference internal" href="#id4">配置数据库</a></li>
+<li><a class="reference internal" href="#id5">模板环境的扩展</a></li>
 <li><a class="reference internal" href="#model">准备Model</a></li>
-<li><a class="reference internal" href="#id7">静态文件处理</a></li>
-<li><a class="reference internal" href="#id8">显示留言</a><ul>
+<li><a class="reference internal" href="#id6">静态文件处理</a></li>
+<li><a class="reference internal" href="#id7">显示留言</a><ul>
 <li><a class="reference internal" href="#guestbook-view">增加guestbook()的View方法</a></li>
-<li><a class="reference internal" href="#guestbook-html">定义guestbook.html模板</a></li>
+<li><a class="reference internal" href="#index-html">定义index.html模板</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#id9">增加留言</a><ul>
+<li><a class="reference internal" href="#id8">增加留言</a><ul>
 <li><a class="reference internal" href="#new-comment-view">增加new_comment()的View方法</a></li>
-<li><a class="reference internal" href="#id10">定义录入表单</a></li>
+<li><a class="reference internal" href="#id9">定义录入表单</a></li>
 <li><a class="reference internal" href="#new-comment-html">编写new_comment.html模板文件</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#id11">删除留言</a><ul>
+<li><a class="reference internal" href="#id10">删除留言</a><ul>
 <li><a class="reference internal" href="#url">URL参数定义</a></li>
-<li><a class="reference internal" href="#id12">出错页面</a></li>
+<li><a class="reference internal" href="#id11">出错页面</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#id13">运行</a></li>
-<li><a class="reference internal" href="#id14">结论</a></li>
+<li><a class="reference internal" href="#id12">运行</a></li>
+<li><a class="reference internal" href="#id13">结论</a></li>
 </ul>
 </li>
 </ul>
