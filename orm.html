@@ -969,12 +969,8 @@ connection连接串上添加charset信息，如:</p>
 <dd>建立一个数据库连接，并返回连接对象。
 connection需要按SQLAlchemy的要求来编写。</dd>
 <dt>get_model(model)</dt>
-<dd>Get the real model object according to the model parameter. And the model
-parameter could be a real model instance, in this case, the model will be
-directly returned. And the model parameter could be tablename, so uliorm
-will use it to find the registered value, and if the value is also a model
-instance, then just return it. But if the value is a string, then import it
-according the value.</dd>
+<dd>返回Model对应的Class。如果是字符串值，则需要根据Model配置的要求在settings.ini
+中定义Model的信息才有效果。也可以传入Model的类。</dd>
 </dl>
 </div>
 <div class="section" id="id25">
