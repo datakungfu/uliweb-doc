@@ -7,7 +7,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>ORM &mdash; Uliweb Documentation v1.0 documentation</title>
+    <title>数据库和ORM &mdash; Uliweb Documentation v1.0 documentation</title>
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
@@ -50,27 +50,937 @@
           <div class="body">
             
   <div class="section" id="orm">
-<h1>ORM<a class="headerlink" href="#orm" title="永久链接至标题">¶</a></h1>
-<p>Uliweb并不绑定任何的ORM，你可能利用dispatch, App的技术自行使用或封装ORM，但是Uliweb
-的确带有一个自行封装的ORM，你可以自由使用它，但是它不是强制的。这个ORM是基于SQLAlchemy
-开发的。</p>
+<h1>数据库和ORM<a class="headerlink" href="#orm" title="永久链接至标题">¶</a></h1>
+<p>Uliweb内置了一个ORM，不过它是通过orm这个app来安装的，所以缺省情况下，ORM不是自
+动生效的。因此，你可以自已使用其它的ORM或数据相关的模块。当然，Uliweb的orm(以下
+简称uliorm)也提供了不错的功能，欢迎使用和提改进意见。uliorm是基于sqlalchemy开
+发的，并且目前没有使用session机制，而且你可以直接使用一些sqlalchemy底层的功能，如:
+select, update, join等。</p>
 <div class="section" id="id1">
-<h2>ORM的配置<a class="headerlink" href="#id1" title="永久链接至标题">¶</a></h2>
-</div>
-<div class="section" id="model">
-<h2>Model定义<a class="headerlink" href="#model" title="永久链接至标题">¶</a></h2>
+<h2>使用要求<a class="headerlink" href="#id1" title="永久链接至标题">¶</a></h2>
+<p>需要安装sqlalchemy 0.6+以上的版本。如果你使用sqlite，则python 2.5+就自带了。如果
+使用其它的数据库，则还需要安装相应的包。sqlalchemy本身是不带的。</p>
 </div>
 <div class="section" id="id2">
-<h2>关系定义<a class="headerlink" href="#id2" title="永久链接至标题">¶</a></h2>
+<h2>配置<a class="headerlink" href="#id2" title="永久链接至标题">¶</a></h2>
+<p>首先将 <tt class="docutils literal"><span class="pre">uliweb.contrib.orm</span></tt> 添加到 <tt class="docutils literal"><span class="pre">apps/settings.ini</span></tt> 的 <tt class="docutils literal"><span class="pre">INSTALLED_APPS</span></tt> 中去。
+<tt class="docutils literal"><span class="pre">uliweb.contrib.orm</span></tt> 的settings.ini中已经提供了几个缺省的配置项，用来控制ORM
+的行为:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">ORM</span><span class="p">]</span>
+<span class="n">DEBUG_LOG</span> <span class="o">=</span> <span class="bp">False</span>
+<span class="n">AUTO_CREATE</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="n">CONNECTION</span> <span class="o">=</span> <span class="s">&#39;sqlite:///database.db&#39;</span>
+</pre></div>
+</div>
+<p>你可以在apps/settings.ini中覆盖它们。</p>
+<p><tt class="docutils literal"><span class="pre">DEBUG_LOG</span></tt> 用来切换是否显示SQLAlchemy的日志。如果设置为True，则SQL语句会输出
+到日志中。缺省为False。</p>
+<p><tt class="docutils literal"><span class="pre">AUTO_CREATE</span></tt> 用于切换是否可以自动建表。在开发的时候，最简单的情况就是当你定
+义完一个Model，那么就可以直接使用它了。Uliorm会自动在数据库中创建表。如果设置为
+False，则需要手工建表。要么，你可以直接手工写Create语句，然后到数据库中去创建表，
+但是我们一般不会使用这种方法。要么，你可以通过uliweb sql &lt;appname&gt;来生成建表的
+SQL语句，然后再到数据库中执行这些语句。但是这种做法，不会将Model中定义的索引也
+自动创建（因为SQLAlchemy目前显示建表的SQL功能不能简单地显示索引创建的SQL代码）。
+所以还不是完全的。而采用uliewb syncdb就可以自动将没有创建过的表进行创建。注意：
+它只会创建没有创建过的表。对于已经创建，但是修改过的表应该如何重建呢？答案是使用
+uliweb reset命令。</p>
+<div class="admonition note">
+<p class="first admonition-title">注解</p>
+<p class="last">自动建表对于sqlite有一个问题。如果在你执行一个事务时，非查询和更新类的语句
+会引发事务的自动提交。而自动建表就是会先查找表是否存在，因此会破坏事务的处理。
+所以建议对于sqlite禁止自动建表，而是手工建表。其它的暂时还没有发现。</p>
+</div>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">CONNECTION</span></tt> 用于设置数据库连接串。它是遵循SQLAlchemy的要求的。（详情可以参考</dt>
+<dd><a class="reference external" href="http://www.sqlalchemy.org/docs/05/dbengine.html#create-engine-url">http://www.sqlalchemy.org/docs/05/dbengine.html#create-engine-url</a>-arguments）</dd>
+</dl>
+<p>普通的格式为:</p>
+<div class="highlight-python"><pre>driver://username:password@host:port/database</pre>
+</div>
+<p>示例如下:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c">#sqlite</span>
+<span class="n">sqlite_db</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="s">&#39;sqlite:////absolute/path/to/database.txt&#39;</span><span class="p">)</span>
+<span class="n">sqlite_db</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="s">&#39;sqlite:///d:/absolute/path/to/database.txt&#39;</span><span class="p">)</span>
+<span class="n">sqlite_db</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="s">&#39;sqlite:///relative/path/to/database.txt&#39;</span><span class="p">)</span>
+<span class="n">sqlite_db</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="s">&#39;sqlite://&#39;</span><span class="p">)</span>  <span class="c"># in-memory database</span>
+<span class="n">sqlite_db</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="s">&#39;sqlite://:memory:&#39;</span><span class="p">)</span>  <span class="c"># the same</span>
+
+<span class="c"># postgresql</span>
+<span class="n">pg_db</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="s">&#39;postgres://scott:tiger@localhost/mydatabase&#39;</span><span class="p">)</span>
+
+<span class="c"># mysql</span>
+<span class="n">mysql_db</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="s">&#39;mysql://scott:tiger@localhost/mydatabase&#39;</span><span class="p">)</span>
+
+<span class="c"># oracle</span>
+<span class="n">oracle_db</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="s">&#39;oracle://scott:tiger@127.0.0.1:1521/sidname&#39;</span><span class="p">)</span>
+
+<span class="c"># oracle via TNS name</span>
+<span class="n">oracle_db</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="s">&#39;oracle://scott:tiger@tnsname&#39;</span><span class="p">)</span>
+
+<span class="c"># mssql using ODBC datasource names.  PyODBC is the default driver.</span>
+<span class="n">mssql_db</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="s">&#39;mssql://mydsn&#39;</span><span class="p">)</span>
+<span class="n">mssql_db</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="s">&#39;mssql://scott:tiger@mydsn&#39;</span><span class="p">)</span>
+
+<span class="c"># firebird</span>
+<span class="n">firebird_db</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="s">&#39;firebird://scott:tiger@localhost/sometest.gdm&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="model">
+<h2>Model 定义<a class="headerlink" href="#model" title="永久链接至标题">¶</a></h2>
+<p>一般情况下，你应该在app下的models.py中创建Model。从uliweb.orm中导入所有东西，然
+后创建自已的Model，它应该从 <tt class="docutils literal"><span class="pre">Model</span></tt> 类进行派生。然后添加你想要定义的字段。例如:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">uliweb.orm</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="k">class</span> <span class="nc">Note</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">username</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">CHAR</span><span class="p">)</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">TEXT</span><span class="p">)</span>
+    <span class="n">homepage</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
+    <span class="n">email</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
+    <span class="n">datetime</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">,</span> <span class="n">auto_now_add</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
 </div>
 <div class="section" id="id3">
-<h2>操作<a class="headerlink" href="#id3" title="永久链接至标题">¶</a></h2>
+<h3>表名<a class="headerlink" href="#id3" title="永久链接至标题">¶</a></h3>
+<p>缺省情况下，表名应该是Model类名的小写。比如上面的Note的表名应该是 <tt class="docutils literal"><span class="pre">note</span></tt> 。</p>
+<p>如果你想设置为其它的表名，你可以在Model类中定义一个 <tt class="docutils literal"><span class="pre">__tablename__</span></tt> ，例如:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">Note</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+
+    <span class="n">__tableame__</span> <span class="o">=</span> <span class="s">&#39;t_note&#39;</span>
+</pre></div>
+</div>
 </div>
 <div class="section" id="id4">
-<h2>事务<a class="headerlink" href="#id4" title="永久链接至标题">¶</a></h2>
+<h3>表参数<a class="headerlink" href="#id4" title="永久链接至标题">¶</a></h3>
+<p>在SQLAlchemy中，当你创建一个表时，你可以传入一些额外的参数，例如: mysql_engin等。
+所以，你可以在Model类中定义 <tt class="docutils literal"><span class="pre">__table_args__</span></tt> ，例如:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">Todo</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">__table_args__</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">mysql_charset</span><span class="o">=</span><span class="s">&#39;utf8&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="oninit">
+<h3>OnInit 方法<a class="headerlink" href="#oninit" title="永久链接至标题">¶</a></h3>
+<p>uliorm也允许你在创建表之时在一些初始化工作。只要写一个OnInit的class method，例
+如:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">Todo</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">OnInit</span><span class="p">(</span><span class="n">cls</span><span class="p">):</span>
+        <span class="n">Index</span><span class="p">(</span><span class="s">&#39;my_indx&#39;</span><span class="p">,</span> <span class="n">cls</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">title</span><span class="p">,</span> <span class="n">cls</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">owner</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>上面的代码是用来创建复合索引。一般的单字段索引，可以在定义字段时直接指定Index=True。</p>
 </div>
 <div class="section" id="id5">
-<h2>信号<a class="headerlink" href="#id5" title="永久链接至标题">¶</a></h2>
+<h3>属性定义<a class="headerlink" href="#id5" title="永久链接至标题">¶</a></h3>
+<p>uliorm中定义一个Model的字段为Property，但为了方便，uliorm还提供了Field函数。</p>
+<p>所有的字段都是以Property结尾的类。下面是uliorm中的字段类:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="s">&#39;BlobProperty&#39;</span><span class="p">,</span> <span class="s">&#39;BooleanProperty&#39;</span><span class="p">,</span> <span class="s">&#39;DateProperty&#39;</span><span class="p">,</span> <span class="s">&#39;DateTimeProperty&#39;</span><span class="p">,</span>
+<span class="s">&#39;TimeProperty&#39;</span><span class="p">,</span> <span class="s">&#39;DecimalProperty&#39;</span><span class="p">,</span> <span class="s">&#39;FloatProperty&#39;</span><span class="p">,</span>
+<span class="s">&#39;IntegerProperty&#39;</span><span class="p">,</span> <span class="s">&#39;Property&#39;</span><span class="p">,</span> <span class="s">&#39;StringProperty&#39;</span><span class="p">,</span> <span class="s">&#39;CharProperty&#39;</span><span class="p">,</span>
+<span class="s">&#39;TextProperty&#39;</span><span class="p">,</span> <span class="s">&#39;UnicodeProperty&#39;</span><span class="p">,</span> <span class="s">&#39;FileProperty&#39;</span>
+</pre></div>
+</div>
+<p>你可能认为它们不好记忆，所以你可以使用Field来定义。</p>
+<p>Field是一个函数，它的第一个参数可以是内置的Python type，也可以是uliorm定义的特殊
+类型。其它的参数是和对应的Property类一致的。它会根据你传入的Python type或特殊类
+型来自动查找匹配的字段类。</p>
+<p>Python type和字段类的对应关系为:</p>
+<div class="highlight-python"><pre>str                 :StringProperty,
+CHAR                :CharProperty,
+unicode             :UnicodeProperty,
+TEXT                :TextProperty,
+BLOB                :BlobProperty,
+FILE                :FileProperty
+int                 :IntegerProperty,
+float               :FloatProperty,
+bool                :BooleanProperty,
+datetime.datetime   :DateTimeProperty,
+datetime.date       :DateProperty,
+datetime.time       :TimeProperty,
+decimal.Decimal     :DecimalProperty,
+DECIMAL             :DecimalProperty,</pre>
+</div>
+<p>小写的，都是Python内置的类型或类。大写的都是uliorm为了方便记忆而创建的。而上面
+看到的关于Node的示例就是使用Field来定义字段的。</p>
+</div>
+<div class="section" id="id">
+<h3>ID 属性<a class="headerlink" href="#id" title="永久链接至标题">¶</a></h3>
+<p>缺省情况下，uliorm会自动为你添加一个 <tt class="docutils literal"><span class="pre">id</span></tt> 字段，而你并不需要在Model中进行定义。</p>
+</div>
+<div class="section" id="property">
+<h3>Property 构造函数<a class="headerlink" href="#property" title="永久链接至标题">¶</a></h3>
+<p>Property 其它所有字段类的基类。所以它的一些属性和方法将会被派生类使用到，它的定
+义为:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">Property</span><span class="p">(</span><span class="n">verbose_name</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+    <span class="n">validators</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">choices</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>verbose_name</dt>
+<dd>用于显示字段的描述信息。一般是用在显示界面上。</dd>
+<dt>name</dt>
+<dd><p class="first">字段名，用在所创建的表中。它一般是和Property的实例名相同。例如:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">username</span> <span class="o">=</span> <span class="n">StringProperty</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;user_name&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p class="last">username就是Property的实例名，而name缺省不给出的话就是 <tt class="docutils literal"><span class="pre">username</span></tt>, 上面的
+示例是指定了一个不同的值。因此你通过orm引用属性时要使用 <tt class="docutils literal"><span class="pre">username``，但是</span>
+<span class="pre">直接对数据库查询或操作时，即要使用</span> <span class="pre">``user_name</span></tt>, 因此为了避免造成理解和使用
+上的混乱，建议不要指定 <tt class="docutils literal"><span class="pre">name</span></tt> 参数。</p>
+</dd>
+<dt>default</dt>
+<dd>字段的缺省值。注意，default可以是一个函数。在创建一个Model的实例时，对于未
+给出值的属性，uliorm会自动使用default给字段赋值。因此，如果default没有赋值，
+则这个值一般为None。但是对于象IntegerProperty之类的特殊字段来说，缺省值不是None，如
+0。同时，在调用时要注意default函数执行是否可以成功。因为有的时候需要
+在某个环境下，而你在执行时可能不具备所要求的环境，比如default函数要处理request.user，
+但是你有可能在批处理中去创建实例，这样request.user是不会存在的，因此会报错。
+简单的处理就是把Model.field.default置为None。</dd>
+<dt>required</dt>
+<dd>指明字段值是否不能为None。如果在创建Model实例时，没有传入required的字段值，
+则uliorm会检查出错。同时这个属性可以用在Form的处理中。</dd>
+<dt>validators</dt>
+<dd><p class="first">当给一个属性赋值时，uliorm会根据这个参数来校验传入值的合法性。它应该是一个
+函数，这个函数应写为:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">validator</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+    <span class="n">xxx</span>
+    <span class="k">if</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">BadValueError</span><span class="p">,</span> <span class="n">message</span>
+</pre></div>
+</div>
+<p class="last">如果校验失败，这个函数应该抛出一个 BadValueError的异常。如果成功，则返回
+None或不返回。</p>
+</dd>
+<dt>choices</dt>
+<dd>当属性值的取值范围是有限时可以使用。它是一个list，每个元素是一个二元tuple，
+格式为(value, display)，value为取值，display为显示信息。目前，uliorm并不用
+它来校验传入数据的正确性，用户可以根据需要自定义校验函数，传入validators中
+进行校验处理。</dd>
+<dt>max_length</dt>
+<dd>字段的最大长度，仅用在 <tt class="docutils literal"><span class="pre">StringProperty</span></tt>, <tt class="docutils literal"><span class="pre">CharProperty</span></tt> 中。如果没
+有指定缺省为30。</dd>
+<dt>index</dt>
+<dd>如果设置为True则表示要使用当前字段生成索引。只适合单字段索引。如果要生成复
+合索引，要生成OnInit类方法，并调用Index函数来生成。缺省为False。</dd>
+<dt>unique</dt>
+<dd>表示字段是否可以重复。缺省为False。</dd>
+<dt>nullable</dt>
+<dd>指示在数据库中，本字段是否可以为 <tt class="docutils literal"><span class="pre">NULL</span></tt> 。缺省为True。</dd>
+</dl>
+</div>
+<div class="section" id="id6">
+<h3>字段列表<a class="headerlink" href="#id6" title="永久链接至标题">¶</a></h3>
+<div class="section" id="charproperty">
+<h4>CharProperty<a class="headerlink" href="#charproperty" title="永久链接至标题">¶</a></h4>
+<p>与 <tt class="docutils literal"><span class="pre">CHAR</span></tt> 相对应。你应该传入一个 <tt class="docutils literal"><span class="pre">max_length</span></tt> 。如果传入一个Unicode字符串它
+将转换为缺省编码(utf-8)。</p>
+</div>
+<div class="section" id="stringproperty">
+<h4>StringProperty<a class="headerlink" href="#stringproperty" title="永久链接至标题">¶</a></h4>
+<p>与 <tt class="docutils literal"><span class="pre">VARCHAR</span></tt> 相对应。你应该传入一个 <tt class="docutils literal"><span class="pre">max_length</span></tt> 。如果传入一个Unicode字符串它
+将转换为缺省编码(utf-8)。目前uliorm从数据库中取出StringProperty时会使用Unicode，
+而不转换为utf-8或其它的编码。因此与UnicodeProperty是一致的。</p>
+</div>
+<div class="section" id="textproperty">
+<h4>TextProperty<a class="headerlink" href="#textproperty" title="永久链接至标题">¶</a></h4>
+<p>与 <tt class="docutils literal"><span class="pre">TEXT</span></tt> 相对应。用于录入大段的文本。</p>
+</div>
+<div class="section" id="unicodeproperty">
+<h4>UnicodeProperty<a class="headerlink" href="#unicodeproperty" title="永久链接至标题">¶</a></h4>
+<p>与 <tt class="docutils literal"><span class="pre">VARCHAR</span></tt> 相对应。但是你需要传入Unicode字符串。</p>
+</div>
+<div class="section" id="blobproperty">
+<h4>BlobProperty<a class="headerlink" href="#blobproperty" title="永久链接至标题">¶</a></h4>
+<p>与 <tt class="docutils literal"><span class="pre">BLOB</span></tt> 相对应。用于保存二进制的文本。</p>
+</div>
+<div class="section" id="dateproperty-datetimeproperty-timeproperty">
+<h4>DateProperty DateTimeProperty TimeProperty<a class="headerlink" href="#dateproperty-datetimeproperty-timeproperty" title="永久链接至标题">¶</a></h4>
+<p>这些字段类型用在日期和时间类型上。它们还有其它的参数:</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>auto_now</dt>
+<dd>当设置为True时，在保存对象时，会自动使用当前系统时间来更新字段的取值。</dd>
+<dt>auto_add_now</dt>
+<dd>当设置为True时，仅创建对象时，会自动使用当前系统时间来更新字段的取值。</dd>
+<dt>format</dt>
+<dd><p class="first">用来设置日期时间的格式串，uliorm会用它进行日期格式的转换。在缺省情况
+下，当传入一个字符串格式的日期字段时，uliorm会进行以下尝试:</p>
+<div class="last highlight-python"><div class="highlight"><pre><span class="s">&#39;%Y-%m-</span><span class="si">%d</span><span class="s"> %H:%M:%S&#39;</span><span class="p">,</span>     <span class="c"># &#39;2006-10-25 14:30:59&#39;</span>
+<span class="s">&#39;%Y-%m-</span><span class="si">%d</span><span class="s"> %H:%M&#39;</span><span class="p">,</span>        <span class="c"># &#39;2006-10-25 14:30&#39;</span>
+<span class="s">&#39;%Y-%m-</span><span class="si">%d</span><span class="s">&#39;</span><span class="p">,</span>              <span class="c"># &#39;2006-10-25&#39;</span>
+<span class="s">&#39;%Y/%m/</span><span class="si">%d</span><span class="s"> %H:%M:%S&#39;</span><span class="p">,</span>     <span class="c"># &#39;2006/10/25 14:30:59&#39;</span>
+<span class="s">&#39;%Y/%m/</span><span class="si">%d</span><span class="s"> %H:%M&#39;</span><span class="p">,</span>        <span class="c"># &#39;2006/10/25 14:30&#39;</span>
+<span class="s">&#39;%Y/%m/</span><span class="si">%d</span><span class="s"> &#39;</span><span class="p">,</span>             <span class="c"># &#39;2006/10/25 &#39;</span>
+<span class="s">&#39;%m/</span><span class="si">%d</span><span class="s">/%Y %H:%M:%S&#39;</span><span class="p">,</span>     <span class="c"># &#39;10/25/2006 14:30:59&#39;</span>
+<span class="s">&#39;%m/</span><span class="si">%d</span><span class="s">/%Y %H:%M&#39;</span><span class="p">,</span>        <span class="c"># &#39;10/25/2006 14:30&#39;</span>
+<span class="s">&#39;%m/</span><span class="si">%d</span><span class="s">/%Y&#39;</span><span class="p">,</span>              <span class="c"># &#39;10/25/2006&#39;</span>
+<span class="s">&#39;%m/</span><span class="si">%d</span><span class="s">/%y %H:%M:%S&#39;</span><span class="p">,</span>     <span class="c"># &#39;10/25/06 14:30:59&#39;</span>
+<span class="s">&#39;%m/</span><span class="si">%d</span><span class="s">/%y %H:%M&#39;</span><span class="p">,</span>        <span class="c"># &#39;10/25/06 14:30&#39;</span>
+<span class="s">&#39;%m/</span><span class="si">%d</span><span class="s">/%y&#39;</span><span class="p">,</span>              <span class="c"># &#39;10/25/06&#39;</span>
+<span class="s">&#39;%H:%M:%S&#39;</span><span class="p">,</span>              <span class="c"># &#39;14:30:59&#39;</span>
+<span class="s">&#39;%H:%M&#39;</span><span class="p">,</span>                 <span class="c"># &#39;14:30&#39;</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</div></blockquote>
+</div>
+<div class="section" id="booleanproperty">
+<h4>BooleanProperty<a class="headerlink" href="#booleanproperty" title="永久链接至标题">¶</a></h4>
+<p>与 <tt class="docutils literal"><span class="pre">Boolean</span></tt> 相对应。不过对于不同的数据库底层可能还是不同。具体是由SQLAlchemy
+来实现的。</p>
+</div>
+<div class="section" id="decimalproperty">
+<h4>DecimalProperty<a class="headerlink" href="#decimalproperty" title="永久链接至标题">¶</a></h4>
+<p>与 <tt class="docutils literal"><span class="pre">Numric</span></tt> 相对应。它有两个参数：</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>precision</dt>
+<dd>总长度，不计算小数点位数。</dd>
+<dt>scale</dt>
+<dd>小数长度。</dd>
+</dl>
+</div></blockquote>
+</div>
+<div class="section" id="floatproperty">
+<h4>FloatProperty<a class="headerlink" href="#floatproperty" title="永久链接至标题">¶</a></h4>
+<p>与 <tt class="docutils literal"><span class="pre">Float</span></tt> 对应。它有一个参数：</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>precision</dt>
+<dd>总长度。</dd>
+</dl>
+</div></blockquote>
+</div>
+<div class="section" id="integerproperty">
+<h4>IntegerProperty<a class="headerlink" href="#integerproperty" title="永久链接至标题">¶</a></h4>
+<p>与 <tt class="docutils literal"><span class="pre">Integer</span></tt> 对应。</p>
+</div>
+<div class="section" id="fileproperty">
+<h4>FileProperty<a class="headerlink" href="#fileproperty" title="永久链接至标题">¶</a></h4>
+<p>与 <tt class="docutils literal"><span class="pre">VARCHAR</span></tt> 对应。用于保存文件名，而不是文件对象。缺省的max_length为255。</p>
+</div>
+</div>
+<div class="section" id="id7">
+<h3>Model的常见属性<a class="headerlink" href="#id7" title="永久链接至标题">¶</a></h3>
+<dl class="docutils">
+<dt>table</dt>
+<dd>uliorm的Model对应于SQLAlchemy的 <tt class="docutils literal"><span class="pre">Table</span></tt> 对象，而 <tt class="docutils literal"><span class="pre">table</span></tt> 将是底层的
+Table的实例。所以你可以使用这个属性来执行表级的操作。</dd>
+<dt>c</dt>
+<dd>Model的字段集。与 table.c 属性是一样的。</dd>
+<dt>properties</dt>
+<dd>所有定义在Model中的属性。</dd>
+<dt>metadata</dt>
+<dd>与SQLAlchemy中的metadata相对应的实例。</dd>
+</dl>
+</div>
+</div>
+<div class="section" id="id8">
+<h2>关系定义<a class="headerlink" href="#id8" title="永久链接至标题">¶</a></h2>
+<p>uliorm支持以下几种关系的定义: OneToOne, Reference, SelfReference, ManyToMany.</p>
+<div class="section" id="onetoone">
+<h3>OneToOne<a class="headerlink" href="#onetoone" title="永久链接至标题">¶</a></h3>
+<p>OneToOne是用来定义一对一的关系。</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">Test</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">username</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">year</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">Test1</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">test</span> <span class="o">=</span> <span class="n">OneToOne</span><span class="p">(</span><span class="n">Test</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">name</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>可以使用OneToOne的关系来直接引用另一个对象。例如:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a1</span> <span class="o">=</span> <span class="n">Test</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;limodou&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a1</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b1</span> <span class="o">=</span> <span class="n">Test1</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="n">a1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b1</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a1</span>
+<span class="go">&lt;Test {&#39;username&#39;:&#39;limodou&#39;,&#39;year&#39;:0,&#39;id&#39;:1}&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a1</span><span class="o">.</span><span class="n">test1</span>
+<span class="go">&lt;Test1 {&#39;test&#39;:&lt;Test {&#39;username&#39;:&#39;limodou&#39;,&#39;year&#39;:0,&#39;id&#39;:1}&gt;,&#39;name&#39;:&#39;user&#39;,&#39;id&#39;:1}&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b1</span><span class="o">.</span><span class="n">test</span>
+<span class="go">&lt;Test {&#39;username&#39;:&#39;limodou&#39;,&#39;year&#39;:0,&#39;id&#39;:1}&gt;</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">注解</p>
+<p class="last">注意，OneToOne只是一个关系，它并不会自动根据主表记录自动创建关联表的记录。</p>
+</div>
+</div>
+<div class="section" id="reference">
+<h3>Reference<a class="headerlink" href="#reference" title="永久链接至标题">¶</a></h3>
+<p>uliorm使用 <tt class="docutils literal"><span class="pre">Reference</span></tt> 来定义多对一的关系。</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">Test</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">username</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">year</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">Test1</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">test</span> <span class="o">=</span> <span class="n">Reference</span><span class="p">(</span><span class="n">Test</span><span class="p">,</span> <span class="n">collection_name</span><span class="o">=</span><span class="s">&#39;tttt&#39;</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">name</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a1</span> <span class="o">=</span> <span class="n">Test</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;limodou1&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a1</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b1</span> <span class="o">=</span> <span class="n">Test1</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="n">a1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b1</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b2</span> <span class="o">=</span> <span class="n">Test1</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;aaaa&#39;</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="n">a1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b2</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a1</span>
+<span class="go">&lt;Test {&#39;username&#39;:&#39;limodou1&#39;,&#39;year&#39;:0,&#39;id&#39;:1}&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">list</span><span class="p">(</span><span class="n">a1</span><span class="o">.</span><span class="n">tttt</span><span class="o">.</span><span class="n">all</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>   <span class="c">#here we use tttt but not test1_set</span>
+<span class="go">&lt;Test1 {&#39;test&#39;:&lt;Test {&#39;username&#39;:&#39;limodou1&#39;,&#39;year&#39;:0,&#39;id&#39;:1}&gt;,&#39;name&#39;:&#39;user&#39;,&#39;id&#39;:1}&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a1</span><span class="o">.</span><span class="n">tttt</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+<span class="go">2</span>
+</pre></div>
+</div>
+<p>上面的例子演示了多个Test1记录可能对应一个Test记录。因此，我们可以在Test1中
+定义 <tt class="docutils literal"><span class="pre">Reference</span></tt> 到Test上。对于Test1的某个实例，假定为b1，我们就可以通过
+b1.test来获得对应的Test对象。这里会自动引发一个查询。如果你想从Test的某个对
+象来反向获取Test1应该怎么办呢？假定Test的对象实例为a1，则缺省情况下我们可以通
+过a1.test1_set.all()来获得a所对应的所有Test1的实例。为什么是all()呢？因为一个
+Test对象有可能对应多个Test1对象（这就是多对一关系），所以得到的可能不仅一条
+记录，应该是一个结果集。再看一下 <tt class="docutils literal"><span class="pre">test1_set</span></tt> ,它就是Test1的表名加 <tt class="docutils literal"><span class="pre">_set</span></tt>
+后缀。但是，如果Test1中有多个字段都是到Test的Reference会出现什么情况。这时，
+Uliweb会抛出异常。原因是，这样会在Test类中出现多个同名的test1_set属性，这是
+有冲突的。所以当存在多个到同一个表的引用时，要进行改名。而Reference提供了一个
+<tt class="docutils literal"><span class="pre">collection_name</span></tt> 的参数，可以用它来定义新的别名。比如上面的 <tt class="docutils literal"><span class="pre">tttt``。这样</span>
+<span class="pre">在获取a1所对应的Test1的记录时，就可以使用</span> <span class="pre">``a1.tttt</span></tt> 来反向获取了。</p>
+<p>Refernce有以下几个参数可以使用:</p>
+<dl class="docutils">
+<dt>reference_class</dt>
+<dd>第一个参数，指明要关联的Model。可以是Model类，也可以是字符串形式的表名。
+如果是第二种用法，则要与get_model配合使用。详见get_model的用法说明。</dd>
+<dt>collection_name</dt>
+<dd>前面已经介绍，是反向获取记录的名字</dd>
+<dt>verbose_name</dt>
+<dd>字段的提示信息</dd>
+<dt>reference_fieldname</dt>
+<dd>当引用一个Model时，缺省情况下是使用该Model的id字段。但是在特殊情况下，你可
+能希望指定其它的字段。这样可以将要引用的字段名传给 <tt class="docutils literal"><span class="pre">reference_fieldname</span></tt>
+参数。这样uliorm会根据被引用的字段来动态创建字段的类型。</dd>
+<dt>required</dt>
+<dd>是否是必输项。缺省为False。</dd>
+</dl>
+<div class="admonition note">
+<p class="first admonition-title">注解</p>
+<p class="last">uliorm的Reference关系并不会生成ForeignKey的外键。因为，一旦使用外键，则删除
+导入数据时都有一个执行顺序，非常难处理。所以在设计上没有采用外键。</p>
+</div>
+</div>
+<div class="section" id="selfreference">
+<h3>SelfReference<a class="headerlink" href="#selfreference" title="永久链接至标题">¶</a></h3>
+<p>如果你想引用自身,你可以使用 <tt class="docutils literal"><span class="pre">SelfReference</span></tt>, 例如:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">username</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">unicode</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">parent</span> <span class="o">=</span> <span class="n">SelfReference</span><span class="p">(</span><span class="n">collection_name</span><span class="o">=</span><span class="s">&#39;children&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="manytomany">
+<h3>ManyToMany<a class="headerlink" href="#manytomany" title="永久链接至标题">¶</a></h3>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">username</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">CHAR</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">year</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">Group</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">name</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">users</span> <span class="o">=</span> <span class="n">ManyToMany</span><span class="p">(</span><span class="n">User</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;limodou&#39;</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;abc&#39;</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g1</span> <span class="o">=</span> <span class="n">Group</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;python&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g1</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g2</span> <span class="o">=</span> <span class="n">Group</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;perl&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g2</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g3</span> <span class="o">=</span> <span class="n">Group</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;java&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g3</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g1</span><span class="o">.</span><span class="n">users</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g1</span><span class="o">.</span><span class="n">users</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>你可以使用 <tt class="docutils literal"><span class="pre">ManyToMany</span></tt> 来指明一个多对多的关系. uliorm会象Django一样自动创建
+第三张表,上例的第三张表会是: <tt class="docutils literal"><span class="pre">group_user_usres</span></tt>, 它是由两个表名(user和group)
+和关系名(users)组成. 第三张表的表结构会是:</p>
+<div class="highlight-python"><pre>CREATE TABLE group_user_users (
+    group_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    PRIMARY KEY (group_id, user_id)
+)</pre>
+</div>
+</div>
+</div>
+<div class="section" id="id9">
+<h2>操作<a class="headerlink" href="#id9" title="永久链接至标题">¶</a></h2>
+<p>ORM的操作可以分为不同的级别: 实例级、Model级和关系级。</p>
+<dl class="docutils">
+<dt>实例级</dt>
+<dd>这类操作只会影响实例自身，你可以进行: 创建、获取、删除、更新等操作。</dd>
+<dt>Model级</dt>
+<dd>这类操作所处理的范围是整个Model或表级，它主要进行集合性质的操作。你可以进行：
+查询、计数、排序、删除、分组等操作。</dd>
+<dt>关系级</dt>
+<dd>不同的关系可以执行不同的操作。如：OneToOne可以进行实例级操作。而Reference,
+SelfReference和ManyToMany则可以进行集合操作。在使用关系时，一种我们是使用
+inst.relationship的方式，这样会自动将关系与正在处理的实例进行条件的绑定，
+另一种是通过Model.relationship的方式，这样可以调用关系字段的某些特殊方法，
+比如用来生成条件。</dd>
+</dl>
+<div class="section" id="id10">
+<h3>实例级<a class="headerlink" href="#id10" title="永久链接至标题">¶</a></h3>
+<div class="section" id="id11">
+<h4>创建实例<a class="headerlink" href="#id11" title="永久链接至标题">¶</a></h4>
+<p>假定有一个 User Model，类的定义为:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+    <span class="n">username</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">CHAR</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+    <span class="n">year</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>所以，如果你想要创建一个User的实例，只要:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;limodou&#39;</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="mi">36</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>但这样还不会保存到数据库中，它只是创建了一个实例，你还需要调用 <tt class="docutils literal"><span class="pre">save</span></tt> 来保存:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">user</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="id12">
+<h4>获取实例<a class="headerlink" href="#id12" title="永久链接至标题">¶</a></h4>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="o">==</span><span class="mi">5</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>可以通过Model.get()来获取一个实例。在get()中是条件。如果是一个整数，则认为是要
+获取id等于这个值的记录。否则你可以使用一个条件。这里条件的写法完全是遵守 SQLAlchemy
+的要求。如果条件不止一个，可以使用 <tt class="docutils literal"><span class="pre">and_,</span> <span class="pre">or_,</span> <span class="pre">not_</span></tt> 或 <tt class="docutils literal"><span class="pre">&amp;,</span> <span class="pre">|,</span> <span class="pre">~</span></tt> 来拼接条件。SQLAlchemy
+的相关文档可以查看： <a class="reference external" href="http://www.sqlalchemy.org/docs/core/tutorial.html">http://www.sqlalchemy.org/docs/core/tutorial.html</a></p>
+<div class="admonition note">
+<p class="first admonition-title">注解</p>
+<p class="last">注意，在结果集上，你可以多个使用filter()连接多个 <tt class="docutils literal"><span class="pre">and</span></tt> 的条件，而get不支
+持这样的用法。比如你可以 User.filter(User.c.id=5).filter(User.c.year&gt;30)。</p>
+</div>
+</div>
+<div class="section" id="id13">
+<h4>删除实例<a class="headerlink" href="#id13" title="永久链接至标题">¶</a></h4>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="n">user</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="id14">
+<h4>更新实例<a class="headerlink" href="#id14" title="永久链接至标题">¶</a></h4>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="n">user</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="s">&#39;user&#39;</span>
+<span class="n">user</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>更新实例可以直接向实例的某个字段赋予新值，也可以使用update方法来一次更新多个字
+段。如:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">user</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;user&#39;</span><span class="p">)</span>
+<span class="n">user</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">注解</p>
+<p class="last">注意，象创建和更新时，在调用相关的方法时，你传入的是key=value的写法，这里
+key就是字段的名字。但是在写条件时，你要使用 Model.c.fieldname 这样的写法，
+并且不是赋值，而是python的各种运算符。不要搞错了。</p>
+</div>
+</div>
+<div class="section" id="api">
+<h4>其它的API<a class="headerlink" href="#api" title="永久链接至标题">¶</a></h4>
+<dl class="docutils">
+<dt>to_dict(fields=[], convert=True, manytomany=False)</dt>
+<dd><p class="first">将实例的值转为一个dict对象。如果没有给出fields参数，则所有字段都将转出。
+注意，这里对 <tt class="docutils literal"><span class="pre">ManyToMany</span></tt> 属性有特殊的处理。因为 <tt class="docutils literal"><span class="pre">ManyToMany</span></tt> 属性并
+不是真正的表中的字段，所以缺省情况下是不会包含这些值的，如果指定manytomany为
+True，则会也把相应的 <tt class="docutils literal"><span class="pre">ManyToMany</span></tt> 所对应的对象集的ID取出来，组织为一个list。
+如果convert=True，则在取出字段值的时候，还会调用field_str函数进行值的处理。
+在调用field_str时，strict保持为False不变。</p>
+<p>举例:</p>
+<div class="last highlight-python"><div class="highlight"><pre><span class="n">a</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">a</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span> <span class="c">#this will dump all fields</span>
+<span class="n">a</span><span class="o">.</span><span class="n">to_dict</span><span class="p">([</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;age&#39;</span><span class="p">])</span>    <span class="c">#this will only dump &#39;name&#39; and &#39;age&#39; fields</span>
+</pre></div>
+</div>
+</dd>
+<dt>field_str(v, strict=False)</dt>
+<dd>将某个字段的值转为字符串表示。如果strict为False，则只会处理日期类型、Decimal
+类型和将Unicode转为字符串。如果strict为True，则：None会转为&#8217;&#8216;，其它的全部转为
+字符串。</dd>
+<dt>get_display_value(field_name)</dt>
+<dd>返回指定字段的显示值。特别是对于包含有choices的字段，可以根据相应的值返回对
+应的choices的值。</dd>
+<dt>get_datastore_value(field_name)</dt>
+<dd><p class="first">返回指定字段的数据库的值。特别是对于 <tt class="docutils literal"><span class="pre">Reference</span></tt> 字段，如果直接使用inst.reference
+则得到的会是引用的对象，而不是数据库保存的值。而使用 <tt class="docutils literal"><span class="pre">get_datastore_value()</span></tt>
+可以得到数据库的值。</p>
+<div class="last admonition note">
+<p class="first admonition-title">注解</p>
+<p class="last">uliorm会将 <tt class="docutils literal"><span class="pre">Reference</span></tt> 字段保存到 <tt class="docutils literal"><span class="pre">_field_name_</span></tt> 的属性中，因此可以
+直接使用它来得到 <tt class="docutils literal"><span class="pre">Reference</span></tt> 的值。比如 <tt class="docutils literal"><span class="pre">User.c.system</span></tt> 可能是指向 <tt class="docutils literal"><span class="pre">System</span></tt>
+表的引用，直接使用 <tt class="docutils literal"><span class="pre">user.system</span></tt> 会得到对象的 <tt class="docutils literal"><span class="pre">System</span></tt> 的对象。而使用 <tt class="docutils literal"><span class="pre">user._system_</span></tt>
+则得到对应的数据库的值。</p>
+</div>
+</dd>
+</dl>
+</div>
+</div>
+<div class="section" id="id15">
+<h3>Model级<a class="headerlink" href="#id15" title="永久链接至标题">¶</a></h3>
+<p>uliorm在Model级上的操作主要有两类，一类是直接通过Model.func来调用的，另一类是通
+过Model.func或Model.relationship的方式返回结果集，再在结果集上进行操作。对于与
+查询相关的函数，是可以连在一起使用的，比如:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">User</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="o">...</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="o">...</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>有些方法会返回结果集，因此你可以在返回值的基础上，再调用查询相关的方法。有些方法会
+直接返回结果，不能再调用查询相关的方法。</p>
+<div class="section" id="id16">
+<h4>查询<a class="headerlink" href="#id16" title="永久链接至标题">¶</a></h4>
+<p>在查询一个表的时候可能会有两种需求：全部记录和按条件筛选，因此对应着可以使用
+<tt class="docutils literal"><span class="pre">all()</span></tt> 和 <tt class="docutils literal"><span class="pre">filter()</span></tt> 。``all()`` 中是没有参数的，它会返回一个 <tt class="docutils literal"><span class="pre">Result</span></tt>
+对象，这是前面介绍的结果集，你可以在结果集上继续使用其它的方法。 <tt class="docutils literal"><span class="pre">filter()</span></tt>
+需要传入条件，条件的写法是符合SQLAlchemy要求的。它也返回一个结果集。多个 <tt class="docutils literal"><span class="pre">filter()</span></tt>
+是可以连接使用的，相当于多个与条件。</p>
+<p>举例:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">User</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+<span class="n">User</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">year</span> <span class="o">&gt;</span> <span class="mi">18</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="id17">
+<h4>删除记录<a class="headerlink" href="#id17" title="永久链接至标题">¶</a></h4>
+<p>Model中提供了 <tt class="docutils literal"><span class="pre">remove(condition)</span></tt> 来删除满足条件的记录。同时你也可以利用结果
+集来删除。例如:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">User</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">year</span><span class="o">&lt;</span><span class="mi">18</span><span class="p">)</span>
+<span class="c">#等价于</span>
+<span class="n">User</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">year</span><span class="o">&lt;</span><span class="mi">18</span><span class="p">)</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">注解</p>
+<p class="last">注意，结果集的删除是使用 <tt class="docutils literal"><span class="pre">remove</span></tt> ，而实例的删除是使用 <tt class="docutils literal"><span class="pre">delete</span></tt> 。</p>
+</div>
+</div>
+<div class="section" id="id18">
+<h4>记录条数统计<a class="headerlink" href="#id18" title="永久链接至标题">¶</a></h4>
+<p>Model中提供了 <tt class="docutils literal"><span class="pre">count(condition)</span></tt> 来计算满足条件的记录数。同时你也可以利用结果
+集来统计，例如:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">User</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">year</span><span class="o">&lt;</span><span class="mi">18</span><span class="p">)</span>
+<span class="c">#等价于</span>
+<span class="n">User</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">year</span><span class="o">&lt;</span><span class="mi">18</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="id19">
+<h4>其它 API<a class="headerlink" href="#id19" title="永久链接至标题">¶</a></h4>
+<dl class="docutils">
+<dt>bind(metadata=None, auto_create=False)</dt>
+<dd>绑定当前的类到一个metadata对象上。如果 <tt class="docutils literal"><span class="pre">auto_create</span></tt> 为 <tt class="xref docutils literal"><span class="pre">True</span></tt>, 则将
+自动建表。</dd>
+<dt>create()</dt>
+<dd>建表，并且会自动检查表是否存在。</dd>
+</dl>
+</div>
+</div>
+<div class="section" id="id20">
+<h3>关系级<a class="headerlink" href="#id20" title="永久链接至标题">¶</a></h3>
+<div class="section" id="one-to-one">
+<h4>一对一(One to One)<a class="headerlink" href="#one-to-one" title="永久链接至标题">¶</a></h4>
+<p>一对一关系没什么特别的，例如:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">Test</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">username</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">year</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">Test1</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">test</span> <span class="o">=</span> <span class="n">OneToOne</span><span class="p">(</span><span class="n">Test</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">name</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">Test</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;limodou&#39;</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="mi">36</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">Test1</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="n">a</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span><span class="o">.</span><span class="n">test</span>
+<span class="go">&lt;Test {&#39;username&#39;:&#39;limodou&#39;, &#39;year&#39;:36}&gt;</span>
+</pre></div>
+</div>
+<p>所以你可以使用 <tt class="docutils literal"><span class="pre">b.test</span></tt> 如同 <tt class="docutils literal"><span class="pre">a</span></tt> 对象。</p>
+<div class="admonition note">
+<p class="first admonition-title">注解</p>
+<p class="last">注意，关系的建立是在相关的对象创建之后，而不是会根据关系自动创建对应的对象。</p>
+</div>
+</div>
+<div class="section" id="many-to-one">
+<h4>多对一(Many to One)<a class="headerlink" href="#many-to-one" title="永久链接至标题">¶</a></h4>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">Test</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">username</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">year</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">Test1</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">test</span> <span class="o">=</span> <span class="n">Reference</span><span class="p">(</span><span class="n">Test</span><span class="p">,</span> <span class="n">collection_name</span><span class="o">=</span><span class="s">&#39;tttt&#39;</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">name</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">Test</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;limodou&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">Test1</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="n">a</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span> <span class="o">=</span> <span class="n">Test1</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;aaaa&#39;</span><span class="p">,</span> <span class="n">test</span><span class="o">=</span><span class="n">a</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>根据上面的代码， Test:Test1 是一个 1:n 关系。并且 <tt class="docutils literal"><span class="pre">b.test</span></tt> 是对象 <tt class="docutils literal"><span class="pre">a</span></tt> 。但是
+<tt class="docutils literal"><span class="pre">a.tttt</span></tt> 将是反向的结果集，它可能不止一个对象。所以 <tt class="docutils literal"><span class="pre">a.tttt</span></tt> 将返回一个 <tt class="docutils literal"><span class="pre">Result</span></tt>
+对象。并且这个结果集对象将绑定到 Test1 Model，所以结果集的 <tt class="docutils literal"><span class="pre">all()</span></tt> 和 <tt class="docutils literal"><span class="pre">filter()</span></tt>
+方法将只返回 Test1 对象。更多的细节可以查看 <tt class="docutils literal"><span class="pre">Result</span></tt> 的描述。</p>
+</div>
+<div class="section" id="many-to-many">
+<h4>多对多(Many to Many)<a class="headerlink" href="#many-to-many" title="永久链接至标题">¶</a></h4>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">username</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">CHAR</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">year</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">class</span> <span class="nc">Group</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">name</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">users</span> <span class="o">=</span> <span class="n">ManyToMany</span><span class="p">(</span><span class="n">User</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;limodou&#39;</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s">&#39;abc&#39;</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g1</span> <span class="o">=</span> <span class="n">Group</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;python&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g2</span> <span class="o">=</span> <span class="n">Group</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;perl&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g3</span> <span class="o">=</span> <span class="n">Group</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;java&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g1</span><span class="o">.</span><span class="n">users</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g1</span><span class="o">.</span><span class="n">users</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>当你调用 <tt class="docutils literal"><span class="pre">a.group_set</span></tt> (因为你没有在ManyToMany属性中定义collection_name)或
+<tt class="docutils literal"><span class="pre">g1.users</span></tt> 时，将返回一个 <tt class="docutils literal"><span class="pre">ManyResult</span></tt> 对象。</p>
+</div>
+</div>
+<div class="section" id="result">
+<h3>Result 对象<a class="headerlink" href="#result" title="永久链接至标题">¶</a></h3>
+<p><tt class="docutils literal"><span class="pre">Result</span></tt> 对象的生成有多种方式，一种是执行某个关系查询时生成的，一种是直接在
+Model上调用 <tt class="docutils literal"><span class="pre">all()</span></tt> 或 <tt class="docutils literal"><span class="pre">filter()</span></tt> 生成的。``Result`` 对象有多个方法可以调
+用，有些方法，如 <tt class="docutils literal"><span class="pre">filter()</span></tt> 会返回 <tt class="docutils literal"><span class="pre">Result</span></tt> 本身，因此还可以继续调用相应的
+方法。有些方法直接返回结果，如： <tt class="docutils literal"><span class="pre">one()</span></tt>, <tt class="docutils literal"><span class="pre">count()</span></tt> 。因此你可以根据不同的
+方法来考虑是不是使用方法的连用形式。</p>
+<p>注意， <tt class="docutils literal"><span class="pre">Result</span></tt> 对象在调用相应的方法时，如果返回的是结果集本身，此时不会立即
+进行数据库的交互，而是当你调用返回非结果集的函数，或要真正获得记录时才会与数据
+库进行交互。比如执行 <tt class="docutils literal"><span class="pre">User.filter(...).count()</span></tt> 时，在执行到User.filter(...)
+并没有与数据库进行交互，但在执行到 count() 时，则生成相应的SQL语句与数据库进行
+交互。又如:</p>
+<div class="highlight-python"><pre>query = User.all()
+for row in query:</pre>
+</div>
+<p>在执行 <tt class="docutils literal"><span class="pre">query</span> <span class="pre">=</span> <span class="pre">User.all()</span></tt> 时，并不会引发数据库操作，而在执行 <tt class="docutils literal"><span class="pre">for</span></tt> 语句时
+才会真正引发数据库的操作。</p>
+<p>同时， <tt class="docutils literal"><span class="pre">Result</span></tt> 在获取数据时，除了 <tt class="docutils literal"><span class="pre">one()</span></tt> 和 <tt class="docutils literal"><span class="pre">values_one()</span></tt> 会直接返回
+一条记录或 None。``all()`` , <tt class="docutils literal"><span class="pre">filter()</span></tt>, <tt class="docutils literal"><span class="pre">values()</span></tt> 会返回一个 generator。
+所以如果你想要一个list对象，需要使用 list(result) 来转成 list 结果。</p>
+<p>方法说明:</p>
+<dl class="docutils">
+<dt>all(): Result</dt>
+<dd>返回Result本身. 注意在 Model中也有一个all()方法，它就是创建一个 <tt class="docutils literal"><span class="pre">Result</span></tt>
+对象，然后将其返回。如果不带任何条件创建一个结果集，则在处理记录时相当
+于all()的调用。</dd>
+<dt>filter(condition): Result</dt>
+<dd><p class="first">按条件查询。可以多个filter连用。返回结果集本身。</p>
+<p>示例:</p>
+<div class="last highlight-python"><div class="highlight"><pre><span class="n">User</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">age</span> <span class="o">&gt;</span> <span class="mi">30</span><span class="p">)</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">username</span><span class="o">.</span><span class="n">like</span><span class="p">(</span><span class="s">&#39;Lee&#39;</span> <span class="o">+</span> <span class="s">&#39;</span><span class="si">%%</span><span class="s">&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+</dd>
+<dt>count(): int</dt>
+<dd><p class="first">返回满足条件的记录条数。需要与前面的all(), filter()连用。</p>
+<div class="admonition note">
+<p class="first admonition-title">注解</p>
+<p class="last">在Model中也有一个count()方法，但是它是可以带条件的，比如: <tt class="docutils literal"><span class="pre">User.count(User.c.age</span> <span class="pre">&gt;</span> <span class="pre">30)</span></tt> 。
+它可以等同于 <tt class="docutils literal"><span class="pre">User.filter(User.c.age</span> <span class="pre">&gt;</span> <span class="pre">30).count()</span></tt></p>
+</div>
+<p>示例:</p>
+<div class="last highlight-python"><div class="highlight"><pre><span class="n">User</span><span class="o">.</span><span class="n">all</span><span class="p">()</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+<span class="n">User</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">username</span> <span class="o">==</span> <span class="s">&#39;a&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd>
+<dt>remove(): None</dt>
+<dd>删除所有满足条件的记录。它其实是调用 Model.remove(condition)。可以和 <tt class="docutils literal"><span class="pre">all()</span></tt>
+和 <tt class="docutils literal"><span class="pre">filter()</span></tt> 连用。</dd>
+<dt>order_by(*field): Result</dt>
+<dd><p class="first">向查询中添加 <tt class="docutils literal"><span class="pre">ORDER</span> <span class="pre">BY</span></tt> 字句。例如:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">result</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">year</span><span class="o">.</span><span class="n">desc</span><span class="p">())</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">username</span><span class="o">.</span><span class="n">asc</span><span class="p">())</span>
+<span class="c">#or</span>
+<span class="n">result</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">year</span><span class="o">.</span><span class="n">desc</span><span class="p">(),</span> <span class="n">User</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">username</span><span class="o">.</span><span class="n">asc</span><span class="p">())</span>
+</pre></div>
+</div>
+<p class="last">缺省情况下是按升序排列，所以asc()可以不加。</p>
+</dd>
+<dt>limit(n): Result</dt>
+<dd>向查询中添加 <tt class="docutils literal"><span class="pre">LIMIT</span></tt> 子句。``n`` 是一个整数。</dd>
+<dt>offset(n): Result</dt>
+<dd>向查询中添加 <tt class="docutils literal"><span class="pre">OFFSET</span></tt> 子句。 <tt class="docutils literal"><span class="pre">n</span></tt> 是一个整数。</dd>
+<dt>distinct(*field): Result</dt>
+<dd>向查询中添加 <tt class="docutils literal"><span class="pre">DISTINCT</span></tt> 函数，field是字段列表。</dd>
+<dt>values(*fields): 结果 generator</dt>
+<dd><p class="first">它将根据前面设置的条件立即返回一个结果的generator。每行只会列出指定的字段值。
+fields为字段列表，可以直接是字段的名字，也可以是Model.c.fieldname的形式。
+例如:</p>
+<div class="last highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">a1</span><span class="o">.</span><span class="n">tttt</span><span class="o">.</span><span class="n">all</span><span class="p">()</span><span class="o">.</span><span class="n">values</span><span class="p">(</span><span class="n">Test1</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">Test1</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+<span class="go">[(u&#39;user&#39;, 5), (u&#39;aaaa&#39;, 10)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">a1</span><span class="o">.</span><span class="n">tttt</span><span class="o">.</span><span class="n">all</span><span class="p">()</span><span class="o">.</span><span class="n">values</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;year&#39;</span><span class="p">)</span>
+<span class="go">a1.tttt.all().values(Test1.c.name, Test1.c.year)</span>
+</pre></div>
+</div>
+</dd>
+<dt>one(): value</dt>
+<dd>只返回结果集中的第一条记录。如果没有记录，则返回 <tt class="xref docutils literal"><span class="pre">None</span></tt> 。</dd>
+<dt>values_one(*fields): value</dt>
+<dd>相当于执行了 <tt class="docutils literal"><span class="pre">values()</span></tt>, 但是只会返回第一条记录。</dd>
+<dt>get(condition): value</dt>
+<dd>相当于 <tt class="docutils literal"><span class="pre">Result.filter(condition).one()</span></tt> 。</dd>
+</dl>
+</div>
+<div class="section" id="manyresult">
+<h3>ManyResult<a class="headerlink" href="#manyresult" title="永久链接至标题">¶</a></h3>
+<p><tt class="docutils literal"><span class="pre">ManyResult</span></tt> 非常象 <tt class="docutils literal"><span class="pre">Result</span></tt>, 只不过它是通过 <tt class="docutils literal"><span class="pre">ManyToMany</span></tt> 关系创建的，它
+拥有与 <tt class="docutils literal"><span class="pre">Result</span></tt> 大部分相同的方法，但是有一些差别:</p>
+<dl class="docutils">
+<dt>add(*objects): boolean</dt>
+<dd>这个方法可以建立多个对象与当前对象的多对多关系。其实就是向第三张关系表中插入
+相应的记录。它会返回一个boolean值。如果为 Ture 表示有变化。否则无变化。如果
+Model A的实例a已经和Model B的某些实例有多对多的关系，那么当你添加新的关系时
+对于已经存在的关系将不会再添加，只添加不存在的关系。</dd>
+<dt>update(*objects): boolean</dt>
+<dd>这个方法与add()有所不同。add会在原来的基础之上添加新的关系。而update会完全
+按照传入的对象来重新修改关系，对于仍然存在的关系将保留，对于不存在的关系将
+删除。它也会返回是否存在修改的状态。</dd>
+<dt>ids(): list</dt>
+<dd>它将返回ManyToMany关系中所有记录的 ID 列表。注意，这里的ID是与定义ManyToMany
+属性时所使用的引用字段一致的。缺省情况下是id字段，如果使用了其它的引用字段
+则有可能是别的字段。</dd>
+<dt>has(*objects): boolean</dt>
+<dd>判断传入的对象是否存在于关系中。这里对象可以是对象的id值，也可以是对象。如果
+存在则返回 True，如果不存在则返回 False。</dd>
+</dl>
+</div>
+</div>
+<div class="section" id="id21">
+<h2>事务处理<a class="headerlink" href="#id21" title="永久链接至标题">¶</a></h2>
+<p>uliorm提供两种控制事务的方式，一种是能过Middleware，一种是手工处理。如果要使用
+Middleware方式，你需要在settings.ini中添加:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">MIDDLEWARE_CLASSES</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s">&#39;uliweb.orm.middle_transaction.TransactionMiddle&#39;</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+<p>使用Mideleware，它将在每个view处理时生效。当view成功处理，没有异常时，事务会被
+自动提交。当view处理失败，抛出异常时，事务会被回滚。注意，这里一定要有异常事务
+才会被回滚。所以，如果你主动处理了异常返回了出错页面，因为Middleware捕获不到异
+常，所以仍然会提交。对于这种情况，你可能需要手工来处理事务。</p>
+<p>手工处理事务，一种是使用缺省的连接，一种是在指定的连接上。uliorm提供了: Begin(),
+Commit(), Rollback()来处理缺省的连接事务控制。如果你通过 <tt class="docutils literal"><span class="pre">db</span> <span class="pre">=</span> <span class="pre">get_connection()</span></tt>
+来得到一个连接，可以调用db对象的 begin(), commit(), rollback() 来进行事务控制。</p>
+</div>
+<div class="section" id="id22">
+<h2>Model注册和引用<a class="headerlink" href="#id22" title="永久链接至标题">¶</a></h2>
+<p>uliorm在考虑Model的可替换性时，提供了一种注册机制。这种机制主要是由orm app来初
+始化的，它对Model的编写有一定的要求。使用注册机制的好处主要有两点：</p>
+<ol class="arabic">
+<li><p class="first">可以方便使用，不用关心要使用的Model是在哪里定义的。orm提供了 <tt class="docutils literal"><span class="pre">get_model()</span></tt>
+方法，可以传入字符串的表名或真正的Model对象。因此在一般情况下，使用字符串
+形式是最方便的。比如我们想获得一个User的Model，可以使用:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">User</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="s">&#39;user&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>但是使用这种字符串的形式，对于Model的配置有要求。需要在settings.ini中配置:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">MODELS</span><span class="p">]</span>
+<span class="n">user</span> <span class="o">=</span> <span class="s">&#39;uliweb.contrib.auth.models.User&#39;</span>
+</pre></div>
+</div>
+<p>其中key为表名，注意是数据库的表名。value为表所对应的Model类的路径。uliorm将
+在需要时自动进行导入。</p>
+<div class="admonition note">
+<p class="first admonition-title">注解</p>
+<p class="last">为什么需要表名呢？因为orm提供的命令行工具中，syncdb会自动创建数据库中
+不存在的表，它就是使用的真正的表名。</p>
+</div>
+</li>
+<li><p class="first">可以有条件的方便进行替换。</p>
+<p>在某些时候，你可能发现某个app的表结构要扩展几个字段，但是因为已经有许多Model
+和这个表实现了关联，而且这个app提供了其它与些Model相关的一些方法。因此，如果
+简单地替换这个app，有可能会要同时修改其它的app的代码，比如导入处理等。如是你
+在定义关系时使用的是get_model(name)的形式，并且name是字符串，这样你实际上已经
+实现了Model的配置化。因此你就可以定义新的Model类，并且配置到settings.ini中来
+替换原来的Model。如果不是把配置信息写到同一个settings.ini中，那么，你可以把
+新的App定义到原来的App之后(这里指INSTALLED_APPS)，这样后面定义的内容会覆盖前
+面定义的内容。这种做比较适合扩展字段的情况，或表结构的修改不影响其它的功能调
+用的情况。</p>
+</li>
+</ol>
+<p>在定义关系时，象OneToOne, Reference和ManyToMany时既可以接受字符串的Model名，也
+可以直接传入Model的类，都可以。</p>
+</div>
+<div class="section" id="uliorm">
+<h2>如何在其它程序中使用 uliorm<a class="headerlink" href="#uliorm" title="永久链接至标题">¶</a></h2>
+</div>
+<div class="section" id="mysql">
+<h2>MySql 的问题<a class="headerlink" href="#mysql" title="永久链接至标题">¶</a></h2>
+<div class="section" id="id23">
+<h3>编码设置<a class="headerlink" href="#id23" title="永久链接至标题">¶</a></h3>
+<p>在MySql中创建表时，uliorm将缺省使用utf8编码来创建，即使MySql的缺省编码不是utf8。
+所以如果你使用的是MySql，你应该检查schema的缺省编码是不是utf8，如果不是则应该在
+connection连接串上添加charset信息，如:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">[</span><span class="n">ORM</span><span class="p">]</span>
+<span class="n">CONNECTION</span> <span class="o">=</span> <span class="s">&#39;mysql://root:limodou@localhost/new?charset=utf8&#39;</span>
+</pre></div>
+</div>
+<p>当服务器的缺省编码不是utf8时， <tt class="docutils literal"><span class="pre">charset=utf8</span></tt> 是必须的，其它情况下可以不设置。</p>
+</div>
+</div>
+<div class="section" id="id24">
+<h2>模块级 API<a class="headerlink" href="#id24" title="永久链接至标题">¶</a></h2>
+<p>uliweb.orm 提供了一些模块级别的方法，用于控制整个uliorm的工作模式。不过，如果
+你不是在脱离uliweb的框架环境下来使用orm模块的话，以下的一些方法在settings.ini
+中有相应的配置，因此不需要去手工调用相应的函数。但如果是在其它的非uliweb的环境
+下使用uliorm，则有可能需要手工调用这些函数来控制uliorm的行为。</p>
+<dl class="docutils">
+<dt>set_auto_create(flag)</dt>
+<dd><p class="first">设置是否自动建表。flag取值为True或False。缺省为False。这一功能在开发时比较
+有用，因为可以不使用uliweb syncdb来建表，但是在生产环境中建议关闭，手动来
+处理。</p>
+<div class="last admonition note">
+<p class="first admonition-title">注解</p>
+<p class="last">在使用sqlite时，发现有问题。当处于一个事务中，如果出现非select, update
+之类的语句，sqlite会自动提交事务，造成事务处理不是按你的预期，所以也需
+要关闭这个功能。</p>
+</div>
+</dd>
+<dt>set_debug_query(flag)</dt>
+<dd>设置调试模式。如果flag为True，则生成的SQL语句将输出到日志中。如果你是通过
+<tt class="docutils literal"><span class="pre">get_connection()</span></tt> 得到的一个数据库连接对象，可以简单地设置 <tt class="docutils literal"><span class="pre">db.echo</span> <span class="pre">=</span> <span class="pre">True</span></tt>
+来激活调试模式。</dd>
+<dt>set_encoding(encoding)</dt>
+<dd>设置缺省编码。缺省为 <tt class="docutils literal"><span class="pre">utf-8</span></tt> 。</dd>
+<dt>get_connection(connection=&#8217;&#8216;, metadata=_default_metadata, default=True, debug=None, **args)</dt>
+<dd>建立一个数据库连接，并返回连接对象。
+connection需要按SQLAlchemy的要求来编写。</dd>
+<dt>get_model(model)</dt>
+<dd>Get the real model object according to the model parameter. And the model
+parameter could be a real model instance, in this case, the model will be
+directly returned. And the model parameter could be tablename, so uliorm
+will use it to find the registered value, and if the value is also a model
+instance, then just return it. But if the value is a string, then import it
+according the value.</dd>
+</dl>
+</div>
+<div class="section" id="id25">
+<h2>测试代码<a class="headerlink" href="#id25" title="永久链接至标题">¶</a></h2>
+<p>在 uliweb/test/test_orm.py 中有一些测试代码，你可以查看一些例子来了解如何使用
+uliorm。</p>
 </div>
 </div>
 
@@ -82,13 +992,75 @@
         <div class="sphinxsidebarwrapper">
   <h3><a href="index.html">內容目录</a></h3>
   <ul>
-<li><a class="reference internal" href="#">ORM</a><ul>
-<li><a class="reference internal" href="#id1">ORM的配置</a></li>
-<li><a class="reference internal" href="#model">Model定义</a></li>
-<li><a class="reference internal" href="#id2">关系定义</a></li>
-<li><a class="reference internal" href="#id3">操作</a></li>
-<li><a class="reference internal" href="#id4">事务</a></li>
-<li><a class="reference internal" href="#id5">信号</a></li>
+<li><a class="reference internal" href="#">数据库和ORM</a><ul>
+<li><a class="reference internal" href="#id1">使用要求</a></li>
+<li><a class="reference internal" href="#id2">配置</a></li>
+<li><a class="reference internal" href="#model">Model 定义</a><ul>
+<li><a class="reference internal" href="#id3">表名</a></li>
+<li><a class="reference internal" href="#id4">表参数</a></li>
+<li><a class="reference internal" href="#oninit">OnInit 方法</a></li>
+<li><a class="reference internal" href="#id5">属性定义</a></li>
+<li><a class="reference internal" href="#id">ID 属性</a></li>
+<li><a class="reference internal" href="#property">Property 构造函数</a></li>
+<li><a class="reference internal" href="#id6">字段列表</a><ul>
+<li><a class="reference internal" href="#charproperty">CharProperty</a></li>
+<li><a class="reference internal" href="#stringproperty">StringProperty</a></li>
+<li><a class="reference internal" href="#textproperty">TextProperty</a></li>
+<li><a class="reference internal" href="#unicodeproperty">UnicodeProperty</a></li>
+<li><a class="reference internal" href="#blobproperty">BlobProperty</a></li>
+<li><a class="reference internal" href="#dateproperty-datetimeproperty-timeproperty">DateProperty DateTimeProperty TimeProperty</a></li>
+<li><a class="reference internal" href="#booleanproperty">BooleanProperty</a></li>
+<li><a class="reference internal" href="#decimalproperty">DecimalProperty</a></li>
+<li><a class="reference internal" href="#floatproperty">FloatProperty</a></li>
+<li><a class="reference internal" href="#integerproperty">IntegerProperty</a></li>
+<li><a class="reference internal" href="#fileproperty">FileProperty</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id7">Model的常见属性</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id8">关系定义</a><ul>
+<li><a class="reference internal" href="#onetoone">OneToOne</a></li>
+<li><a class="reference internal" href="#reference">Reference</a></li>
+<li><a class="reference internal" href="#selfreference">SelfReference</a></li>
+<li><a class="reference internal" href="#manytomany">ManyToMany</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id9">操作</a><ul>
+<li><a class="reference internal" href="#id10">实例级</a><ul>
+<li><a class="reference internal" href="#id11">创建实例</a></li>
+<li><a class="reference internal" href="#id12">获取实例</a></li>
+<li><a class="reference internal" href="#id13">删除实例</a></li>
+<li><a class="reference internal" href="#id14">更新实例</a></li>
+<li><a class="reference internal" href="#api">其它的API</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id15">Model级</a><ul>
+<li><a class="reference internal" href="#id16">查询</a></li>
+<li><a class="reference internal" href="#id17">删除记录</a></li>
+<li><a class="reference internal" href="#id18">记录条数统计</a></li>
+<li><a class="reference internal" href="#id19">其它 API</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id20">关系级</a><ul>
+<li><a class="reference internal" href="#one-to-one">一对一(One to One)</a></li>
+<li><a class="reference internal" href="#many-to-one">多对一(Many to One)</a></li>
+<li><a class="reference internal" href="#many-to-many">多对多(Many to Many)</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#result">Result 对象</a></li>
+<li><a class="reference internal" href="#manyresult">ManyResult</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id21">事务处理</a></li>
+<li><a class="reference internal" href="#id22">Model注册和引用</a></li>
+<li><a class="reference internal" href="#uliorm">如何在其它程序中使用 uliorm</a></li>
+<li><a class="reference internal" href="#mysql">MySql 的问题</a><ul>
+<li><a class="reference internal" href="#id23">编码设置</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id24">模块级 API</a></li>
+<li><a class="reference internal" href="#id25">测试代码</a></li>
 </ul>
 </li>
 </ul>

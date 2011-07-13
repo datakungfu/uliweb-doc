@@ -172,10 +172,13 @@ app即可。因为在它们的settings.ini中已经写好了MIDDLEWARE_CLASSES�
 用于i18n的处理，设置语言类型</li>
 <li>&#8216;uliweb.contrib.session.middle_session.SessionMiddle&#8217; ORDER=50 app=&#8217;session&#8217;
 请求进来时自动读取session。请求结束时自动保存cookie。</li>
+<li>&#8216;uliweb.orm.middle_transaction.TransactionMiddle&#8217; ORDER=100 app=&#8217;orm&#8217;
+提供事务的支持。当view出错时，自动回滚，成功时自动提交。</li>
 </ul>
-<p>所以，当你使用了上面三个app时，它会自动按:</p>
+<p>所以，当你使用了上面几个app时，它会自动按:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="s">&#39;uliweb.contrib.session.middle_session.SessionMiddle&#39;</span>
 <span class="s">&#39;uliweb.contrib.auth.middle_auth.AuthMiddle&#39;</span>
+<span class="s">&#39;uliweb.orm.middle_transaction.TransactionMiddle&#39;</span>
 <span class="s">&#39;uliweb.i18n.middle_i18n.I18nMiddle&#39;</span>
 </pre></div>
 </div>
